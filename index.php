@@ -126,18 +126,6 @@ if (isset($_GET['msg']) && $_GET['msg'] != '') {
 ?>
 
 <div class="container mt-5">
-    <!-- TÌM KIẾM CÔNG VIỆC -->
-    <div class="row mb-3">
-        <div class="col-md-12">
-            <form method="get" class="d-flex">
-          <input type="text" name="search" class="form-control me-2" 
-              placeholder="Tìm kiếm công việc theo tiêu đề hoặc mô tả" 
-                       value="<?php echo isset($_GET['search']) ? htmlspecialchars($_GET['search']) : ''; ?>">
-                <button type="submit" class="btn btn-primary">Tìm kiếm</button>
-            </form>
-        </div>
-    </div>
-
     <!-- BÁO CÁO THỐNG KÊ -->
     <?php render_statistics($stats_status, $stats_priority); ?>
 

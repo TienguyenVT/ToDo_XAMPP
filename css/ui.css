@@ -1,0 +1,244 @@
+.card-item .d-flex.align-items-center {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.card-item .d-flex.align-items-center .form-select {
+  min-width: 140px;
+  max-width: 180px;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+.card-item .d-flex.align-items-center .btn {
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+.card-item .d-flex.align-items-center form.d-inline.ms-auto {
+  margin-left: auto;
+}
+
+.card-item .d-flex .btn-outline-danger {
+  min-width: 64px;
+}
+.card-item .d-flex .btn-outline-warning {
+  min-width: 64px;
+}
+
+@media (max-width: 600px) {
+  .card-item .d-flex.align-items-center {
+    gap: 6px;
+  }
+  .card-item .d-flex.align-items-center .form-select {
+    min-width: 120px;
+  }
+  .card-item .d-flex .btn-outline-danger,
+  .card-item .d-flex .btn-outline-warning {
+    min-width: 56px;
+    padding: 6px 8px;
+  }
+}
+
+:root {
+  --bg: #fbfdff;
+  --card: #ffffff;
+  /* muted text color should be a neutral gray; primary remains the blue accent */
+  --muted: #64748b; /* slate-500 */
+  --primary: #0d6efd;
+  --accent: #0d6efd;
+  --soft: #f1f7fb;
+  --shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
+  --radius: 12px;
+}
+
+/* Standardize buttons across the app (base + size + subtle animation/shadow)
+   Uses the project's color variables where appropriate so Bootstrap variants keep their meaning.
+*/
+.btn {
+  padding: 10px 14px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+  box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
+  border: 1px solid transparent;
+  text-decoration: none;
+}
+
+/* Ensure inline text inside buttons is centered and doesn't overflow the kanban card layout */
+.btn, .btn * { text-align: center; }
+
+.btn-sm { padding: 6px 10px; font-size: 13px; border-radius: 8px; }
+
+.btn:focus { outline: none; box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.08); }
+.btn:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(16, 24, 40, 0.12); }
+.btn:active { transform: translateY(0) scale(.995); }
+
+/* Keep Bootstrap color semantics but ensure consistent backgrounds using variables */
+.btn-primary { background: var(--primary); color: #fff; border-color: rgba(13, 110, 253, 0.9); }
+.btn-secondary { background: #6c757d; color: #fff; }
+.btn-success { background: #198754; color: #fff; }
+.btn-danger { background: #dc3545; color: #fff; }
+.btn-info { background: #0dcaf0; color: #000; }
+
+/* Outline variants: keep transparent bg and colored borders/text */
+.btn-outline-warning { color: #ffc107; border-color: #ffc107; background: transparent; }
+.btn-outline-danger { color: #dc3545; border-color: #dc3545; background: transparent; }
+.btn-outline-warning:hover, .btn-outline-danger:hover { color: #fff; }
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: #0f1724;
+}
+
+.container-root {
+  max-width: 1200px;
+  margin: 28px auto;
+  padding: 18px;
+}
+
+.board {
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+}
+.column {
+  flex: 1;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.7),
+    rgba(241, 247, 251, 0.7)
+  );
+  border-radius: 12px;
+  padding: 12px;
+  min-height: 420px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+}
+.column h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+}
+.column-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.card-item {
+  background: var(--card);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 6px 20px rgba(16, 24, 40, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+.card-item .meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.card-item h5 {
+  margin: 0 0 6px 0;
+  font-size: 15px;
+}
+.card-item p {
+  margin: 0 0 8px 0;
+  color: #334155;
+}
+
+.badge-priority {
+  padding: 6px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: white;
+}
+.badge-low {
+  background: #6abf8f;
+}
+.badge-medium {
+  background: #ffb86b;
+}
+.badge-high {
+  background: #ff6b6b;
+}
+
+.card-placeholder {
+  display: none;
+}
+
+.column.drag-over {
+  outline: none;
+  transform: none;
+}
+
+@media (max-width: 1000px) {
+  .board {
+    overflow-x: auto;
+    display: flex;
+    padding-bottom: 8px;
+  }
+  .column {
+    min-width: 320px;
+    flex: 0 0 320px;
+  }
+  .column-body {
+    max-height: 520px;
+  }
+}
+
+@media (max-width: 600px) {
+  .column {
+    min-width: 280px;
+    flex: 0 0 280px;
+    padding: 10px;
+  }
+  .card-item {
+    padding: 10px;
+  }
+  .card-placeholder {
+    height: 64px;
+  }
+}
+
+.column[aria-label] {
+  position: relative;
+}
+
+/* --- merged from style.css --- */
+body {
+  background-color: #f8f9fa;
+}
+.card {
+  border: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.navbar {
+  margin-bottom: 2rem;
+}
+.list-group-item h5 {
+  color: #0d6efd;
+}
+@media (max-width: 768px) {
+  .container {
+    padding: 0 5px;
+  }
+  .card {
+    margin-bottom: 1rem;
+  }
+}
