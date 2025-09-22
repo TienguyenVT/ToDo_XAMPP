@@ -260,6 +260,15 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+/* Fix width for the "Chưa hoàn thành" (pending) column so it doesn't auto-scale.
+   Use flex shorthand to set a stable flex-basis and prevent growth/shrink where appropriate. */
+.column[data-status="pending"],
+.column[data-status="in-progress"],
+.column[data-status="completed"] {
+  flex: 0 0 273px; /* fixed width on desktop */
+  max-width: 273px;
+}
 .column h4 {
   margin: 0 0 8px 0;
   font-size: 16px;
@@ -356,6 +365,17 @@ body {
   .column-body {
     max-height: 520px;
   }
+
+  /* On medium screens, reduce pending column width slightly */
+  .column[data-status="pending"] {
+    flex: 0 0 320px;
+    max-width: 320px;
+  }
+  .column[data-status="in-progress"],
+  .column[data-status="completed"] {
+    flex: 0 0 320px;
+    max-width: 320px;
+  }
 }
 
 @media (max-width: 600px) {
@@ -369,6 +389,19 @@ body {
   }
   .card-placeholder {
     height: 64px;
+  }
+}
+
+/* On small screens, make pending column a bit narrower to fit mobile layouts */
+@media (max-width: 600px) {
+  .column[data-status="pending"] {
+    flex: 0 0 280px;
+    max-width: 280px;
+  }
+  .column[data-status="in-progress"],
+  .column[data-status="completed"] {
+    flex: 0 0 280px;
+    max-width: 280px;
   }
 }
 
