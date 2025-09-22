@@ -1,11 +1,9 @@
 <?php
 function render_reminder_component($task_id, $conn) {
 ?>
-<div class="align-items-center">
 <button type="button" class="btn btn-info btn-sm ms-2" data-bs-toggle="collapse"
     data-bs-target="#reminder-<?php echo $task_id; ?>">Nhắc nhở
 </button>
-</div>
 <div class="collapse mt-2" id="reminder-<?php echo $task_id; ?>">
     <form action="index.php" method="POST" class="d-flex align-items-center">
         <input type="hidden" name="task_id" value="<?php echo $task_id; ?>">
