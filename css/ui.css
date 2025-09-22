@@ -81,14 +81,116 @@
 /* Keep Bootstrap color semantics but ensure consistent backgrounds using variables */
 .btn-primary { background: var(--primary); color: #fff; border-color: rgba(13, 110, 253, 0.9); }
 .btn-secondary { background: #6c757d; color: #fff; }
-.btn-success { background: #198754; color: #fff; }
+.btn-success { background: #0d6efd; color: #fff; }
 .btn-danger { background: #dc3545; color: #fff; }
-.btn-info { background: #0dcaf0; color: #000; }
+.btn-info { background: #0d6efd; color: #fff; }
+/* Explicitly override Bootstrap's .btn-info hover/focus to keep white text
+   and the chosen blue background. This selector is intentionally specific and
+   uses !important to ensure it wins over the CDN Bootstrap rules. */
+.card-item .d-flex .btn.btn-info:hover,
+.card-item .d-flex .btn.btn-info:focus,
+.card-item .d-flex .btn.btn-info:active,
+.card-item .d-flex .btn.btn-info.show,
+.card-item .d-flex .btn.btn-info:focus-visible {
+  background-color: #0d6efd;
+  color: #ffffff;
+  border-color: rgba(13, 110, 253, 0.9);
+}
 
-/* Outline variants: keep transparent bg and colored borders/text */
-.btn-outline-warning { color: #ffc107; border-color: #ffc107; background: transparent; }
-.btn-outline-danger { color: #dc3545; border-color: #dc3545; background: transparent; }
-.btn-outline-warning:hover, .btn-outline-danger:hover { color: #fff; }
+/* Outline variants: keep transparent bg and colored borders/text
+   Also set per-variant CSS custom properties so a single grouped hover rule
+   can keep colors stable while preserving motion effects. */
+.btn {
+  /* defaults for custom props (fallbacks used if a variant doesn't set them) */
+  --btn-bg: transparent;
+  --btn-fg: inherit;
+  --btn-border: transparent;
+}
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  border-color: rgba(13, 110, 253, 0.9);
+  --btn-bg: var(--primary);
+  --btn-fg: #fff;
+  --btn-border: rgba(13, 110, 253, 0.9);
+}
+.btn-secondary {
+  background: #6c757d;
+  color: #fff;
+  --btn-bg: #6c757d;
+  --btn-fg: #fff;
+  --btn-border: #6c757d;
+}
+.btn-success {
+  background: #0d6efd;
+  color: #fff;
+  --btn-bg: #0d6efd;
+  --btn-fg: #fff;
+  --btn-border: rgba(13, 110, 253, 0.9);
+}
+.btn-danger {
+  background: #fff;
+  color: #000;
+  --btn-bg: #fff;
+  --btn-fg: #000;
+  --btn-border: #fff;
+}
+.btn-info {
+  background: #0d6efd;
+  color: #fff;
+  --btn-bg: #0d6efd;
+  --btn-fg: #fff;
+  --btn-border: rgba(13, 110, 253, 0.9);
+}
+.btn-warning {
+  background: #ffc107;
+  color: #000;
+  --btn-bg: #ffc107;
+  --btn-fg: #000;
+  --btn-border: #ffc107;
+}
+.btn-light {
+  background: #f8f9fa;
+  color: #000;
+  --btn-bg: #f8f9fa;
+  --btn-fg: #000;
+  --btn-border: #f8f9fa;
+}
+.btn-dark {
+  background: #212529;
+  color: #fff;
+  --btn-bg: #212529;
+  --btn-fg: #fff;
+  --btn-border: #212529;
+}
+.btn-outline-warning {
+  color: #000;
+  border-color: #CED4DA;
+  background: transparent;
+  --btn-bg: transparent;
+  --btn-fg: #000;
+  --btn-border: #CED4DA;
+}
+.btn-outline-danger {
+  color: #000;
+  border-color: #CED4DA;
+  background: transparent;
+  --btn-bg: transparent;
+  --btn-fg: #000;
+  --btn-border: #CED4DA;
+}
+
+/* Single grouped rule: on hover/focus/active keep colors sourced from custom props
+   so buttons only animate/lift without changing their color/foreground. */
+body .btn:hover,
+body .btn:focus,
+body .btn:active,
+body .btn.show,
+body .btn:focus-visible {
+  background-color: var(--btn-bg);
+  color: var(--btn-fg);
+  border-color: var(--btn-border);
+}
 
 * {
   box-sizing: border-box;
