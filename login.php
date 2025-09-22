@@ -20,7 +20,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $error = "Vui lòng nhập tên đăng nhập và mật khẩu.";
     } else {
         $sql = "SELECT id, username, password, full_name FROM users WHERE username = ?";
-        
+
         if ($stmt = $conn->prepare($sql)) {
             $stmt->bind_param("s", $param_username);
             $param_username = $username;
@@ -34,13 +34,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         if (password_verify($password, $hashed_password)) {
                             // Mật khẩu chính xác, bắt đầu session mới
                             session_start();
-                            
+
                             // Lưu dữ liệu vào biến session
                             $_SESSION["loggedin"] = true;
                             $_SESSION["user_id"] = $id;
                             $_SESSION["username"] = $username;
                             $_SESSION["full_name"] = $full_name;
-                            
+
                             // Chuyển hướng người dùng đến trang chính
                             header("location: index.php");
                         } else {
@@ -85,15 +85,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <h3 class="card-title text-center mb-4">Đăng Nhập TodoWeb</h3>
 
                         <?php if (isset($_GET['registration_success'])): ?>
-                        <div class="alert alert-success">
-                            Đăng ký tài khoản thành công! Vui lòng đăng nhập.
-                        </div>
+                            <div class="alert alert-success">
+                                Đăng ký tài khoản thành công! Vui lòng đăng nhập.
+                            </div>
                         <?php endif; ?>
 
                         <?php if (!empty($error)): ?>
-                        <div class="alert alert-danger">
-                            <?php echo $error; ?>
-                        </div>
+                            <div class="alert alert-danger">
+                                <?php echo $error; ?>
+                            </div>
                         <?php endif; ?>
 
                         <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
@@ -107,7 +107,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                                 <input type="password" name="password" id="password" class="form-control" required>
                             </div>
                             <div class="d-grid">
-                              <button type="submit" class="btn btn-primary">Đăng Nhập</button>
+                                <button type="submit" class="btn btn-primary">Đăng Nhập</button>
                             </div>
                             <p class="text-center mt-3">
                                 Chưa có tài khoản? <a href="register.php">Đăng ký ngay</a>.

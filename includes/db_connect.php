@@ -15,4 +15,3 @@ if ($conn->connect_error) {
 
 // Thiết lập charset thành UTF-8 để hỗ trợ tiếng Việt
 $conn->set_charset("utf8");
-?>

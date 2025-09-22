@@ -1,11 +1,13 @@
 <?php
+
 /**
  * Lấy tất cả công việc của một người dùng cụ thể
  * @param mysqli $conn Đối tượng kết nối CSDL
  * @param int $user_id ID của người dùng
  * @return array Mảng chứa các công việc
  */
-function get_user_tasks($conn, $user_id, $priority = null) {
+function get_user_tasks($conn, $user_id, $priority = null)
+{
     $tasks = [];
     $valid_priorities = ['low', 'medium', 'high'];
     if ($priority !== null && !in_array($priority, $valid_priorities)) {
@@ -50,7 +52,8 @@ function get_user_tasks($conn, $user_id, $priority = null) {
  * @param string|null $due_date Ngày hết hạn
  * @return bool True nếu thành công, False nếu thất bại
  */
-function create_task($conn, $user_id, $title, $description, $due_date, $priority) {
+function create_task($conn, $user_id, $title, $description, $due_date, $priority)
+{
     $sql = "INSERT INTO tasks (user_id, title, description, due_date, priority) VALUES (?, ?, ?, ?, ?)";
     if ($stmt = $conn->prepare($sql)) {
         $stmt->bind_param("issss", $user_id, $title, $description, $due_date, $priority);
@@ -70,12 +73,13 @@ function create_task($conn, $user_id, $title, $description, $due_date, $priority
  * @param int $user_id ID của người dùng (để bảo mật)
  * @return bool True nếu thành công, False nếu thất bại
  */
-function update_task_status($conn, $task_id, $status, $user_id) {
+function update_task_status($conn, $task_id, $status, $user_id)
+{
     if (!in_array($status, ['pending', 'in-progress', 'completed'])) {
         error_log("Invalid status attempted: " . $status);
         return false;
     }
-    
+
     $sql = "UPDATE tasks SET status = ? WHERE id = ? AND user_id = ?";
     if ($stmt = $conn->prepare($sql)) {
         $stmt->bind_param("sii", $status, $task_id, $user_id);
@@ -102,7 +106,8 @@ function update_task_status($conn, $task_id, $status, $user_id) {
  * @param int $user_id ID của người dùng (để bảo mật)
  * @return bool True nếu thành công, False nếu thất bại
  */
-function delete_task($conn, $task_id, $user_id) {
+function delete_task($conn, $task_id, $user_id)
+{
     $sql = "DELETE FROM tasks WHERE id = ? AND user_id = ?";
     if ($stmt = $conn->prepare($sql)) {
         $stmt->bind_param("ii", $task_id, $user_id);
@@ -117,7 +122,8 @@ function delete_task($conn, $task_id, $user_id) {
 /**
  * Lấy chi tiết một công việc
  */
-function get_task_detail($conn, $task_id, $user_id) {
+function get_task_detail($conn, $task_id, $user_id)
+{
     $sql = "SELECT id, title, description, due_date, status, priority FROM tasks WHERE id = ? AND user_id = ?";
     if ($stmt = $conn->prepare($sql)) {
         $stmt->bind_param("ii", $task_id, $user_id);
@@ -133,7 +139,8 @@ function get_task_detail($conn, $task_id, $user_id) {
 /**
  * Cập nhật nội dung công việc
  */
-function update_task($conn, $task_id, $user_id, $title, $description, $due_date, $priority) {
+function update_task($conn, $task_id, $user_id, $title, $description, $due_date, $priority)
+{
     $sql = "UPDATE tasks SET title = ?, description = ?, due_date = ?, priority = ? WHERE id = ? AND user_id = ?";
     if ($stmt = $conn->prepare($sql)) {
         $stmt->bind_param("ssssii", $title, $description, $due_date, $priority, $task_id, $user_id);

@@ -47,7 +47,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($stmt = $conn->prepare($sql)) {
             // Mã hóa mật khẩu
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            
+
             $stmt->bind_param("sss", $username, $hashed_password, $full_name);
 
             if ($stmt->execute()) {
@@ -89,11 +89,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         <h3 class="card-title text-center mb-4">Tạo Tài Khoản Mới</h3>
 
                         <?php if (!empty($errors)): ?>
-                        <div class="alert alert-danger">
-                            <?php foreach ($errors as $error): ?>
-                            <p class="mb-0"><?php echo $error; ?></p>
-                            <?php endforeach; ?>
-                        </div>
+                            <div class="alert alert-danger">
+                                <?php foreach ($errors as $error): ?>
+                                    <p class="mb-0"><?php echo $error; ?></p>
+                                <?php endforeach; ?>
+                            </div>
                         <?php endif; ?>
 
                         <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
