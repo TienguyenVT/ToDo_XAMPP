@@ -28,7 +28,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_task'])) {
 
     if (!empty($title)) {
         create_task($conn, $user_id, $title, $description, $due_date, $priority);
-        header("location: index.php?msg=".urlencode("Thêm công việc thành công!"));
+        header("location: index.php?msg=" . urlencode("Thêm công việc thành công!"));
         exit();
     }
 }
@@ -38,7 +38,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_status'])) {
     $task_id = $_POST['task_id'];
     $new_status = $_POST['status'];
     update_task_status($conn, $task_id, $new_status, $user_id);
-    header("location: index.php?msg=".urlencode("Cập nhật trạng thái thành công!"));
+    header("location: index.php?msg=" . urlencode("Cập nhật trạng thái thành công!"));
     exit();
 }
 
@@ -46,7 +46,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_status'])) {
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_task'])) {
     $task_id = $_POST['task_id'];
     delete_task($conn, $task_id, $user_id);
-    header("location: index.php?msg=".urlencode("Xóa công việc thành công!"));
+    header("location: index.php?msg=" . urlencode("Xóa công việc thành công!"));
     exit();
 }
 
@@ -73,14 +73,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_reminder'])) {
     $task_id = intval($_POST['task_id']);
     $reminder_time = $_POST['reminder_time'];
     add_reminder($conn, $task_id, $reminder_time);
-    header("location: index.php?msg=".urlencode("Thêm nhắc nhở thành công!"));
+    header("location: index.php?msg=" . urlencode("Thêm nhắc nhở thành công!"));
     exit();
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_reminder'])) {
     $reminder_id = intval($_POST['reminder_id']);
     delete_reminder($conn, $reminder_id);
-    header("location: index.php?msg=".urlencode("Xóa nhắc nhở thành công!"));
+    header("location: index.php?msg=" . urlencode("Xóa nhắc nhở thành công!"));
     exit();
 }
 
@@ -91,7 +91,7 @@ $tasks = get_user_tasks($conn, $user_id, $priority_filter);
 // Lọc theo tìm kiếm nếu có
 if (isset($_GET['search']) && $_GET['search'] !== '') {
     $keyword = mb_strtolower(trim($_GET['search']));
-    $tasks = array_filter($tasks, function($task) use ($keyword) {
+    $tasks = array_filter($tasks, function ($task) use ($keyword) {
         $title = mb_strtolower($task['title']);
         $desc = mb_strtolower($task['description']);
         return strpos($title, $keyword) !== false
@@ -102,7 +102,7 @@ if (isset($_GET['search']) && $_GET['search'] !== '') {
 // Sắp xếp công việc nếu có
 if (isset($_GET['sort']) && $_GET['sort'] !== '') {
     $sort = $_GET['sort'];
-    usort($tasks, function($a, $b) use ($sort) {
+    usort($tasks, function ($a, $b) use ($sort) {
         if ($sort == 'due_date') {
             return strtotime($a['due_date']) <=> strtotime($b['due_date']);
         } elseif ($sort == 'status') {
@@ -121,7 +121,7 @@ render_header($_SESSION["full_name"]);
 
 // Hiển thị thông báo nếu có
 if (isset($_GET['msg']) && $_GET['msg'] != '') {
-    echo '<div class="container mt-3"><div class="alert alert-success">'.htmlspecialchars($_GET['msg']).'</div></div>';
+    echo '<div class="container mt-3"><div class="alert alert-success">' . htmlspecialchars($_GET['msg']) . '</div></div>';
 }
 ?>
 

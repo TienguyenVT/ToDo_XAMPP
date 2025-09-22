@@ -1,4 +1,5 @@
 <?php
+
 /**
  * File này đóng vai trò như một điểm truy cập trung tâm cho tất cả các chức năng.
  * Mọi chức năng được tổ chức thành các component riêng biệt trong thư mục components/

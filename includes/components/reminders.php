@@ -1,8 +1,10 @@
 <?php
+
 /**
  * Tạo nhắc nhở cho công việc
  */
-function create_reminder($conn, $task_id, $reminder_time) {
+function create_reminder($conn, $task_id, $reminder_time)
+{
     $sql = "INSERT INTO reminders (task_id, reminder_time) VALUES (?, ?)";
     if ($stmt = $conn->prepare($sql)) {
         $stmt->bind_param("is", $task_id, $reminder_time);
@@ -17,7 +19,8 @@ function create_reminder($conn, $task_id, $reminder_time) {
 /**
  * Lấy tất cả nhắc nhở của một công việc
  */
-function get_reminders($conn, $task_id) {
+function get_reminders($conn, $task_id)
+{
     $reminders = [];
     $sql = "SELECT * FROM reminders WHERE task_id = ? ORDER BY reminder_time ASC";
     if ($stmt = $conn->prepare($sql)) {
@@ -36,7 +39,8 @@ function get_reminders($conn, $task_id) {
 /**
  * Xóa nhắc nhở
  */
-function delete_reminder($conn, $reminder_id) {
+function delete_reminder($conn, $reminder_id)
+{
     $sql = "DELETE FROM reminders WHERE id = ?";
     if ($stmt = $conn->prepare($sql)) {
         $stmt->bind_param("i", $reminder_id);
@@ -51,6 +55,7 @@ function delete_reminder($conn, $reminder_id) {
 /**
  * Wrapper for compatibility: add_reminder calls create_reminder.
  */
-function add_reminder($conn, $task_id, $reminder_time) {
+function add_reminder($conn, $task_id, $reminder_time)
+{
     return create_reminder($conn, $task_id, $reminder_time);
 }
