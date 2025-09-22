@@ -239,6 +239,29 @@ body {
   padding: 6px;
 }
 
+/* Fix the height of the first column (pending / "Chưa hoàn thành") so it doesn't auto-scale.
+   Use the current visual height as the fixed value and allow its contents to scroll. Width
+   behavior remains unchanged. A smaller fixed height is used on narrow screens. */
+.column[data-status="pending"] .column-body,
+.column[data-status="in-progress"] .column-body,
+.column[data-status="completed"] .column-body {
+  height: 420px; /* fixed height based on current layout */
+  min-height: 420px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+@media (max-width: 600px) {
+  .column[data-status="pending"] .column-body,
+  .column[data-status="in-progress"] .column-body,
+  .column[data-status="completed"] .column-body {
+    height: 320px; /* slightly smaller on small devices */
+    min-height: 320px;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+}
+
 .card-item {
   background: var(--card);
   border-radius: 10px;
