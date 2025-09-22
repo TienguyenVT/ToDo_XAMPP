@@ -23,23 +23,14 @@ function get_task_count_by_status($conn, $user_id) {
  * Thống kê số lượng công việc theo ưu tiên
  */
 function get_task_count_by_priority($conn, $user_id) {
-    // Không còn chức năng thống kê theo ưu tiên vì bảng tasks không có priority
-    $result = ['low' => 0, 'medium' => 0, 'high' => 0];
-    $sql = "SELECT IFNULL(priority, 'medium') as priority, COUNT(*) as count FROM tasks WHERE user_id = ? GROUP BY priority";
+    $result = [];
+    $sql = "SELECT priority, COUNT(*) as count FROM tasks WHERE user_id = ? GROUP BY priority";
     if ($stmt = $conn->prepare($sql)) {
         $stmt->bind_param("i", $user_id);
         if ($stmt->execute()) {
             $rs = $stmt->get_result();
             while ($row = $rs->fetch_assoc()) {
-                $p = $row['priority'];
-                // normalize common values to our keys
-                if ($p === null || $p === '') $p = 'medium';
-                $p = strtolower($p);
-                if (!in_array($p, ['low','medium','high'])) {
-                    // treat unknown as medium
-                    $p = 'medium';
-                }
-                $result[$p] = (int)$row['count'];
+                $result[$row['priority']] = $row['count'];
             }
         }
         $stmt->close();

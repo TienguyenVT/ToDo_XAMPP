@@ -66,20 +66,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng Ký - TodoWeb</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <?php
-    $uiFile = __DIR__ . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'ui.css';
-    $uiV = file_exists($uiFile) ? filemtime($uiFile) : time();
-    ?>
-    <link rel="stylesheet" href="css/ui.css?v=<?php echo $uiV; ?>">
+    <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
     <div class="container">
         <div class="row justify-content-center">
@@ -87,25 +81,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <div class="card mt-5">
                     <div class="card-body">
                         <h3 class="card-title text-center mb-4">Tạo Tài Khoản Mới</h3>
-
+                        
                         <?php if (!empty($errors)): ?>
-                        <div class="alert alert-danger">
-                            <?php foreach ($errors as $error): ?>
-                            <p class="mb-0"><?php echo $error; ?></p>
-                            <?php endforeach; ?>
-                        </div>
+                            <div class="alert alert-danger">
+                                <?php foreach ($errors as $error): ?>
+                                    <p class="mb-0"><?php echo $error; ?></p>
+                                <?php endforeach; ?>
+                            </div>
                         <?php endif; ?>
 
                         <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
                             <div class="mb-3">
                                 <label for="full_name" class="form-label">Họ và Tên</label>
-                                <input type="text" name="full_name" id="full_name" class="form-control"
-                                    value="<?php echo htmlspecialchars($full_name); ?>" required>
+                                <input type="text" name="full_name" id="full_name" class="form-control" value="<?php echo htmlspecialchars($full_name); ?>" required>
                             </div>
                             <div class="mb-3">
                                 <label for="username" class="form-label">Tên Đăng Nhập</label>
-                                <input type="text" name="username" id="username" class="form-control"
-                                    value="<?php echo htmlspecialchars($username); ?>" required>
+                                <input type="text" name="username" id="username" class="form-control" value="<?php echo htmlspecialchars($username); ?>" required>
                             </div>
                             <div class="mb-3">
                                 <label for="password" class="form-label">Mật Khẩu</label>
@@ -127,5 +119,4 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>
