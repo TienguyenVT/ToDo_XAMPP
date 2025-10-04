@@ -93,21 +93,24 @@ function handleReminderSubmit(e) {
 
 // Hàm hiển thị thông báo
 function showAlert(type, message) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    `;
-    
-    // Thêm vào container
+    // Use the shared global-message-container and insert HTML so script.js's
+    // insertAdjacentHTML override will schedule auto-dismiss and adjust layout.
     const container = document.getElementById('global-message-container');
-    if (container) {
+    const safeType = ['success','danger','warning','info'].includes(type) ? type : 'info';
+    const html = `<div class="alert alert-${safeType} alert-dismissible fade" role="alert">${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>`;
+    if (container && typeof container.insertAdjacentHTML === 'function') {
+        container.insertAdjacentHTML('beforeend', html);
+        // script.js overrides insertAdjacentHTML to add .show and schedule auto-dismiss
+    } else if (container) {
+        // Fallback: create and append
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${safeType} alert-dismissible fade show`;
+        alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
         container.appendChild(alertDiv);
-        
-        // Tự động ẩn sau 3 giây
-        setTimeout(() => {
-            alertDiv.remove();
-        }, 3000);
+        // simple auto remove fallback
+        setTimeout(() => { try { alertDiv.remove(); } catch(e){} }, 5000);
+    } else {
+        // Last resort: native alert
+        alert(message);
     }
 }

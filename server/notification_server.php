@@ -86,7 +86,9 @@ class NotificationServer implements MessageComponentInterface {
                         'type' => 'reminder',
                         'title' => $notification['task_title'],
                         'message' => $notification['message'],
-                        'task_id' => $notification['task_id']
+                        'task_id' => $notification['task_id'],
+                        'reminder_id' => $notification['reminder_id'] ?? null,
+                        'reminder_time' => $notification['scheduled_at'] ?? null
                     ]));
                 }
             }

@@ -95,6 +95,9 @@ try {
         'notifications' => array_map(function($notif) {
             return [
                 'id' => $notif['id'],
+                'task_id' => $notif['task_id'],
+                'reminder_id' => $notif['reminder_id'],
+                'reminder_time' => $notif['scheduled_at'],
                 'message' => $notif['message'],
                 'type' => mapPriorityToType($notif['priority']),
                 'title' => $notif['task_title']

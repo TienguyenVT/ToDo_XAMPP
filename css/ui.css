@@ -504,3 +504,5 @@ body {
   transition: transform 800ms ease;
   will-change: transform;
 }
+
+/* notification-container rules removed — notifications unified to #global-message-container */

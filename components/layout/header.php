@@ -28,14 +28,10 @@ function render_header($user_full_name)
     ?>
     <script src="js/reminder_handler.js?v=<?php echo $reminderJsV; ?>" defer></script>
     <?php
-    $notifCssFile = $baseCssPath . 'notifications.css';
-    $notifCssV = file_exists($notifCssFile) ? filemtime($notifCssFile) : time();
-
     $baseJsPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'js' . DIRECTORY_SEPARATOR;
     $notifJsFile = $baseJsPath . 'handle_notifications.js';
     $notifJsV = file_exists($notifJsFile) ? filemtime($notifJsFile) : time();
     ?>
-    <link rel="stylesheet" href="css/notifications.css?v=<?php echo $notifCssV; ?>">
     <script src="js/handle_notifications.js?v=<?php echo $notifJsV; ?>"></script>
     </head>
 
@@ -79,8 +75,6 @@ function render_header($user_full_name)
                 </div>
             </div>
         </nav>
-    <!-- Notification container for reminder alerts -->
-    <div id="notification-container" class="notification-container"></div>
     <!-- Global message container (alerts injected here appear under header, above statistics) -->
     <div id="global-message-container" class="container mt-3"></div>
     <?php

@@ -18,7 +18,21 @@ function checkNotifications() {
             console.log('Received notifications:', data);
             if (data.success && data.notifications && data.notifications.length > 0) {
                 data.notifications.forEach(notification => {
-                    createNotification(notification);
+                    // Unified rendering: always use the global UI handlers which target
+                    // #global-message-container and are styled by ui.css. This removes
+                    // the old floating notification code path.
+                    try {
+                        if (typeof showReminderAlert === 'function' && notification.task_title) {
+                            showReminderAlert(notification.task_title, notification.scheduled_at || notification.reminder_time || '');
+                        } else if (typeof showAlert === 'function') {
+                            showAlert('info', notification.message);
+                        } else {
+                            // If neither function exists, log an error so we can fix integration.
+                            console.error('No global notification renderer available for', notification);
+                        }
+                    } catch (e) {
+                        console.error('Error rendering notification via global UI:', e, notification);
+                    }
                 });
             }
         })
@@ -31,42 +45,7 @@ function checkNotifications() {
         });
 }
 
-// Hàm tạo và hiển thị notification
-function createNotification(notification) {
-    const container = document.getElementById('notification-container') || createNotificationContainer();
-    
-    const alertDiv = document.createElement('div');
-    alertDiv.className = 'alert alert-info alert-dismissible fade show';
-    alertDiv.role = 'alert';
-    
-    alertDiv.innerHTML = `
-        <strong>Nhắc nhở!</strong> ${notification.message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    `;
-    
-    container.appendChild(alertDiv);
-    
-    // Tự động ẩn sau 5 giây
-    setTimeout(() => {
-        const alert = bootstrap.Alert.getOrCreateInstance(alertDiv);
-        alert.close();
-    }, 5000);
-}
-
-// Tạo container cho notifications nếu chưa tồn tại
-function createNotificationContainer() {
-    const container = document.createElement('div');
-    container.id = 'notification-container';
-    container.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-        max-width: 400px;
-    `;
-    document.body.appendChild(container);
-    return container;
-}
+// Legacy floating notification UI removed. Notifications render via showAlert/showReminderAlert
 
 // Khởi động kiểm tra notification
 document.addEventListener('DOMContentLoaded', function() {

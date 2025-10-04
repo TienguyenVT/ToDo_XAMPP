@@ -197,10 +197,26 @@ class EnhancedNotificationServer implements MessageComponentInterface {
                             'type' => 'reminder',
                             'title' => $notification['task_title'],
                             'message' => $notification['message'],
-                            'task_id' => $notification['task_id']
+                            'task_id' => $notification['task_id'],
+                            'reminder_id' => $notification['reminder_id'] ?? null,
+                            'reminder_time' => $notification['scheduled_at'] ?? null
                         ]));
                         $notificationSent = true;
                     }
+                }
+            }
+
+            // Send to connected websocket clients as well
+            foreach ($this->clients as $c) {
+                if (isset($c->user_id) && $c->user_id == $notification['user_id']) {
+                    $c->send(json_encode([
+                        'type' => 'reminder',
+                        'title' => $notification['task_title'],
+                        'message' => $notification['message'],
+                        'task_id' => $notification['task_id'],
+                        'reminder_id' => $notification['reminder_id'] ?? null,
+                        'reminder_time' => $notification['scheduled_at'] ?? null
+                    ]));
                 }
             }
 

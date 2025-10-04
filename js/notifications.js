@@ -24,7 +24,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = JSON.parse(e.data);
             
             if (data.type === 'reminder') {
-                showReminderAlert(data.title, data.message);
+                // If server includes task_id and reminder_time, pass them so UI can remove the reminder from the card
+                if (data.task_id && data.reminder_time) {
+                    showReminderAlert(data.task_id, data.title || '', data.reminder_time);
+                } else {
+                    // Fallback to legacy signature: title, message
+                    showReminderAlert(null, data.title || data.message || 'Nhắc nhở', new Date().toISOString());
+                }
             }
         };
         

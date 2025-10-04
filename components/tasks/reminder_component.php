@@ -8,23 +8,12 @@ function render_reminder_component($task_id, $conn)
     <div class="collapse mt-2" id="reminder-<?php echo $task_id; ?>">
         <form action="index.php" method="POST" class="d-flex align-items-center reminder-form">
             <input type="hidden" name="task_id" value="<?php echo $task_id; ?>">
-            <input type="datetime-local" name="reminder_time" class="form-control form-control-sm me-2" required>
-            <button type="submit" name="add_reminder" class="btn btn-success btn-sm w-100">Thêm nhắc nhở</button>
+            <input type="datetime-local" name="reminder_time" class="form-control form-control-sm me-2" required 
+                   min="<?php echo date('Y-m-d\TH:i'); ?>">
+            <button type="submit" name="add_reminder" class="btn btn-success btn-sm w-100">
+                <span class="button-text">Thêm nhắc nhở</span>
+            </button>
         </form>
-        <script>
-            // Prevent double submission but allow first submission
-            document.querySelectorAll('.reminder-form').forEach(form => {
-                form.addEventListener('submit', function(e) {
-                    const submitBtn = this.querySelector('button[type="submit"]');
-                    if (submitBtn.disabled) {
-                        e.preventDefault();
-                        return false;
-                    }
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'Đang xử lý...';
-                });
-            });
-        </script>
         <?php $reminders = get_reminders($conn, $task_id); ?>
         <?php if (!empty($reminders)): ?>
             <ul class="list-group list-group-flush mt-2">
