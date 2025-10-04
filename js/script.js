@@ -12,13 +12,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   });
-  // Thông báo cập nhật trạng thái
-  const statusSelects = document.querySelectorAll('select[name="status"]');
-  statusSelects.forEach(function (sel) {
-    sel.addEventListener("change", function () {
-      alert("Trạng thái công việc đã được cập nhật!");
-    });
-  });
+  // Thông báo cập nhật trạng thái handled by server redirect -> index.php?msg=
 
   // Kanban scroller buttons and keyboard support
   const kanbanScroller = document.getElementById("kanban-scroller");
@@ -49,4 +43,166 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   }
+
+  // --- Reminder Notification ---
+  function showReminderAlert(taskTitle, reminderTime) {
+    const timeStr = new Date(reminderTime).toLocaleString('vi-VN', { hour12: false });
+    const html = `<div class="alert alert-info alert-dismissible fade" role="alert">
+      <strong>Nhắc nhở:</strong> Công việc <b>"${taskTitle}"</b> đến hạn lúc <b>${timeStr}</b>!
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>`;
+    const container = document.getElementById('global-message-container');
+    if (container) {
+      container.insertAdjacentHTML('beforeend', html);
+      const last = container.lastElementChild;
+      // trigger transition
+      requestAnimationFrame(() => {
+        last.classList.add('show');
+        updatePushedContent();
+      });
+      scheduleAlertAutoDismiss(last);
+    }
+  }
+
+  function fetchReminders() {
+    fetch('includes/components/notifications.php')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.notifications)) {
+          data.notifications.forEach(n => {
+            const key = `reminder_${n.task_id}_${n.reminder_time}`;
+            if (!window[key]) {
+              showReminderAlert(n.task_title, n.reminder_time);
+              window[key] = true;
+            }
+          });
+        }
+      });
+  }
+
+  // Auto-dismiss alerts after N milliseconds
+  const ALERT_AUTO_DISMISS_MS = 5000; // 2 seconds
+
+  function scheduleAlertAutoDismiss(alertEl) {
+    if (!alertEl) return;
+    // If it's already scheduled, skip
+    if (alertEl.dataset.autodismiss) return;
+    alertEl.dataset.autodismiss = '1';
+    setTimeout(() => {
+      try {
+        // Use Bootstrap's alert dispose if available
+        if (typeof bootstrap !== 'undefined' && bootstrap.Alert) {
+          const a = bootstrap.Alert.getOrCreateInstance(alertEl);
+          // when closed, update pushed content
+          alertEl.addEventListener('closed.bs.alert', function () {
+            updatePushedContent();
+          }, { once: true });
+          a.close();
+        } else {
+          alertEl.classList.remove('show');
+          alertEl.classList.add('hide');
+          alertEl.remove();
+          updatePushedContent();
+        }
+      } catch (e) {
+        alertEl.remove();
+        updatePushedContent();
+      }
+    }, ALERT_AUTO_DISMISS_MS);
+  }
+
+  // Move following content down by the total height of visible alerts
+  function updatePushedContent() {
+    const container = document.getElementById('global-message-container');
+    if (!container) return;
+    // compute total height of visible alerts
+    const alerts = Array.from(container.querySelectorAll('.alert'));
+    const total = alerts.reduce((sum, a) => sum + (a.offsetHeight || 0), 0);
+    // apply transform only to the main content container (.container.mt-5)
+    const main = document.querySelector('#global-message-container + .container.mt-3, #global-message-container + .container.mt-5, .container.mt-5');
+    if (main) {
+      main.style.transform = `translateY(${total}px)`;
+    }
+  }
+
+  // Reset transform when alerts removed
+  function resetPushedContent() {
+    const container = document.getElementById('global-message-container');
+    if (!container) return;
+    const main = document.querySelector('#global-message-container + .container.mt-3, #global-message-container + .container.mt-5, .container.mt-5');
+    if (main) main.style.transform = '';
+  }
+
+  // Schedule existing alerts on load
+  document.querySelectorAll('#global-message-container .alert').forEach(scheduleAlertAutoDismiss);
+
+  // Ensure reminders inserted later get auto-dismiss scheduled
+  const origInsert = Element.prototype.insertAdjacentHTML;
+  Element.prototype.insertAdjacentHTML = function(position, text) {
+    origInsert.call(this, position, text);
+    if (this.id === 'global-message-container') {
+      // schedule the last child if it's an alert
+      const last = this.lastElementChild;
+      if (last && last.classList && last.classList.contains('alert')) {
+        requestAnimationFrame(() => {
+          last.classList.add('show');
+          updatePushedContent();
+        });
+        scheduleAlertAutoDismiss(last);
+      }
+    }
+  };
+
+  // Process server-side flash messages enqueued on page by PHP
+  function insertServerFlash(f) {
+    try {
+      const container = document.getElementById('global-message-container');
+      if (!container) return;
+      const type = f.type && ['success','danger','warning','info'].includes(f.type) ? f.type : 'info';
+      const msg = f.msg || '';
+      const html = `<div class="alert alert-${type} alert-dismissible fade" role="alert">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>`;
+      container.insertAdjacentHTML('beforeend', html);
+      const last = container.lastElementChild;
+      if (last) {
+        requestAnimationFrame(() => {
+          last.classList.add('show');
+          updatePushedContent();
+        });
+        scheduleAlertAutoDismiss(last);
+      }
+    } catch (e) {
+      console.error('insertServerFlash error', e);
+    }
+  }
+
+  if (window.__SERVER_FLASH__ && Array.isArray(window.__SERVER_FLASH__)) {
+    window.__SERVER_FLASH__.forEach(insertServerFlash);
+    // clear queue to avoid re-processing
+    window.__SERVER_FLASH__ = [];
+  }
+
+  // Kiểm tra nhắc nhở mỗi 60 giây
+  setInterval(fetchReminders, 60000);
+  // Kiểm tra ngay khi load trang
+  fetchReminders();
+
+  // Prevent double submission for reminder forms
+  const reminderForms = document.querySelectorAll('.reminder-form');
+  reminderForms.forEach(form => {
+    form.addEventListener('submit', function(e) {
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn.disabled) {
+        e.preventDefault();
+        return false;
+      }
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Đang xử lý...';
+      
+      // Re-enable button after 3 seconds as fallback
+      setTimeout(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Thêm nhắc nhở';
+      }, 3000);
+    });
+  });
 });

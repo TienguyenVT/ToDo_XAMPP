@@ -17,3 +17,4 @@
 require_once __DIR__ . '/components/tasks.php';
 require_once __DIR__ . '/components/reminders.php';
 require_once __DIR__ . '/components/statistics.php';
+require_once __DIR__ . '/components/messages.php';

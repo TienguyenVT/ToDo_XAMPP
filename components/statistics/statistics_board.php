@@ -2,7 +2,7 @@
 function render_statistics($stats_status, $stats_priority)
 {
 ?>
-    <div class="row mb-4">
+    <div class="row mt-4 mb-4">
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header text-black">

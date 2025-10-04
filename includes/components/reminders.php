@@ -1,21 +1,98 @@
 <?php
 
 /**
- * Tạo nhắc nhở cho công việc
+ * Tạo nhắc nhở cho công việc và thêm vào notification queue
  */
 function create_reminder($conn, $task_id, $reminder_time)
 {
-    $sql = "INSERT INTO reminders (task_id, reminder_time) VALUES (?, ?)";
-    if ($stmt = $conn->prepare($sql)) {
-        $stmt->bind_param("is", $task_id, $reminder_time);
-        if ($stmt->execute()) {
-            return true;
+    try {
+        error_log("Starting create_reminder - Task ID: $task_id, Time: $reminder_time");
+        
+        // Validate input
+        if (empty($task_id) || empty($reminder_time)) {
+            throw new Exception("Task ID và thời gian nhắc nhở không được để trống");
         }
-        $stmt->close();
-    }
-    return false;
-}
+        
+        // Bắt đầu transaction
+        $conn->begin_transaction();
+        error_log("Transaction started");
 
+        // 1. Lấy thông tin task
+        $sql = "SELECT t.id, t.user_id, t.title as task_title 
+                FROM tasks t 
+                WHERE t.id = ?";
+        $stmt = $conn->prepare($sql);
+        
+        if (!$stmt) {
+            throw new Exception("Prepare statement failed: " . $conn->error);
+        }
+        
+        $stmt->bind_param("i", $task_id);
+        
+        if (!$stmt->execute()) {
+            throw new Exception("Không thể lấy thông tin task");
+        }
+        
+        $result = $stmt->get_result();
+        $task = $result->fetch_assoc();
+        $stmt->close();
+        
+        if (!$task) {
+            throw new Exception("Không tìm thấy task");
+        }
+        
+        // 2. Thêm reminder
+        $sql = "INSERT INTO reminders (task_id, user_id, reminder_time) VALUES (?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("iis", $task_id, $task['user_id'], $reminder_time);
+        
+        if (!$stmt->execute()) {
+            throw new Exception("Không thể tạo reminder");
+        }
+        
+        $reminder_id = $stmt->insert_id;
+        $stmt->close();
+
+        // 3. Tạo message cho notification
+        $formatted_time = date('H:i d/m/Y', strtotime($reminder_time));
+        $message = sprintf(
+            'Nhắc nhở: Công việc "%s" đến hạn lúc %s',
+            $task['task_title'],
+            $formatted_time
+        );
+
+        // 4. Thêm vào notification queue
+        $sql = "INSERT INTO notification_queue 
+                (user_id, task_id, reminder_id, message, scheduled_at) 
+                VALUES (?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("iiiss", 
+            $task['user_id'], 
+            $task_id, 
+            $reminder_id, 
+            $message, 
+            $reminder_time);
+            
+        if (!$stmt->execute()) {
+            throw new Exception("Không thể thêm vào notification queue");
+        }
+        
+        $stmt->close();
+
+        // Commit transaction nếu mọi thứ OK
+        $conn->commit();
+        return true;
+
+    } catch (Exception $e) {
+        // Rollback nếu có lỗi
+        if ($conn->inTransaction()) {
+            $conn->rollback();
+            error_log("Transaction rolled back");
+        }
+        error_log("Error in create_reminder: " . $e->getMessage());
+        throw $e;
+    }
+}
 /**
  * Lấy tất cả nhắc nhở của một công việc
  */
@@ -37,23 +114,43 @@ function get_reminders($conn, $task_id)
 }
 
 /**
- * Xóa nhắc nhở
+ * Xóa nhắc nhở và notification tương ứng
  */
 function delete_reminder($conn, $reminder_id)
 {
-    $sql = "DELETE FROM reminders WHERE id = ?";
-    if ($stmt = $conn->prepare($sql)) {
+    try {
+        $conn->begin_transaction();
+
+        // Xóa notifications trong queue trước
+        $sql = "DELETE FROM notification_queue WHERE reminder_id = ? AND status = 'pending'";
+        $stmt = $conn->prepare($sql);
         $stmt->bind_param("i", $reminder_id);
-        if ($stmt->execute()) {
-            return true;
+        if (!$stmt->execute()) {
+            throw new Exception("Không thể xóa notification");
         }
         $stmt->close();
+
+        // Xóa reminder
+        $sql = "DELETE FROM reminders WHERE id = ?";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("i", $reminder_id);
+        if (!$stmt->execute()) {
+            throw new Exception("Không thể xóa reminder");
+        }
+        $stmt->close();
+
+        $conn->commit();
+        return true;
+
+    } catch (Exception $e) {
+        $conn->rollback();
+        error_log("Error in delete_reminder: " . $e->getMessage());
+        return false;
     }
-    return false;
 }
 
 /**
- * Wrapper for compatibility: add_reminder calls create_reminder.
+ * Wrapper for compatibility: add_reminder calls create_reminder
  */
 function add_reminder($conn, $task_id, $reminder_time)
 {

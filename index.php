@@ -28,7 +28,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_task'])) {
 
     if (!empty($title)) {
         create_task($conn, $user_id, $title, $description, $due_date, $priority);
-        header("location: index.php?msg=" . urlencode("Thêm công việc thành công!"));
+        set_flash('Thêm công việc thành công!', 'success');
+        header("location: index.php");
         exit();
     }
 }
@@ -38,7 +39,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_status'])) {
     $task_id = $_POST['task_id'];
     $new_status = $_POST['status'];
     update_task_status($conn, $task_id, $new_status, $user_id);
-    header("location: index.php?msg=" . urlencode("Cập nhật trạng thái thành công!"));
+    set_flash('Cập nhật trạng thái thành công!', 'success');
+    header("location: index.php");
     exit();
 }
 
@@ -46,7 +48,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_status'])) {
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_task'])) {
     $task_id = $_POST['task_id'];
     delete_task($conn, $task_id, $user_id);
-    header("location: index.php?msg=" . urlencode("Xóa công việc thành công!"));
+    set_flash('Xóa công việc thành công!', 'success');
+    header("location: index.php");
     exit();
 }
 
@@ -64,23 +67,44 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_task'])) {
     $priority = isset($_POST['priority']) ? $_POST['priority'] : 'medium';
 
     update_task($conn, $task_id, $user_id, $title, $description, $due_date, $priority);
+    set_flash('Cập nhật công việc thành công!', 'success');
     header("location: index.php");
     exit();
 }
 
 // Xử lý nhắc nhở
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_reminder'])) {
-    $task_id = intval($_POST['task_id']);
-    $reminder_time = $_POST['reminder_time'];
-    add_reminder($conn, $task_id, $reminder_time);
-    header("location: index.php?msg=" . urlencode("Thêm nhắc nhở thành công!"));
+    try {
+        $task_id = intval($_POST['task_id']);
+        $reminder_time = $_POST['reminder_time'];
+        
+        if (empty($task_id) || empty($reminder_time)) {
+            throw new Exception("Vui lòng điền đầy đủ thông tin");
+        }
+        
+        // Debug info
+        error_log("Adding reminder - Task ID: " . $task_id . ", Time: " . $reminder_time);
+        
+        if (add_reminder($conn, $task_id, $reminder_time)) {
+            set_flash('Thêm nhắc nhở thành công!', 'success');
+        } else {
+            throw new Exception("Không thể thêm nhắc nhở");
+        }
+    } catch (Exception $e) {
+        error_log("Error adding reminder: " . $e->getMessage());
+        set_flash($e->getMessage(), 'danger');
+    }
+    
+    // Redirect sau khi xử lý
+    header("location: index.php");
     exit();
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_reminder'])) {
     $reminder_id = intval($_POST['reminder_id']);
     delete_reminder($conn, $reminder_id);
-    header("location: index.php?msg=" . urlencode("Xóa nhắc nhở thành công!"));
+    set_flash('Xóa nhắc nhở thành công!', 'success');
+    header("location: index.php");
     exit();
 }
 
@@ -119,10 +143,9 @@ $stats_priority = get_task_count_by_priority($conn, $user_id);
 // Render giao diện
 render_header($_SESSION["full_name"]);
 
-// Hiển thị thông báo nếu có
-if (isset($_GET['msg']) && $_GET['msg'] != '') {
-    echo '<div class="container mt-3"><div class="alert alert-success">' . htmlspecialchars($_GET['msg']) . '</div></div>';
-}
+// Hiển thị flash message nếu có (session-based)
+// display_flash() sẽ echo một <div class="alert alert-...">..</div>
+display_flash();
 ?>
 
 <div class="container mt-5">
@@ -130,14 +153,22 @@ if (isset($_GET['msg']) && $_GET['msg'] != '') {
     <?php render_statistics($stats_status, $stats_priority); ?>
 
     <!-- KANBAN + FORM CRUD -->
-    <div class="row">
-        <div class="col-md-4">
-            <h3><?php echo $edit_task ? 'Sửa Công Việc' : 'Thêm Công Việc Mới'; ?></h3>
-            <?php render_task_form($edit_task); ?>
-        </div>
-        <div class="col-md-8">
-            <h3>Bảng Kanban Công Việc</h3>
-            <?php render_kanban_board($tasks, $conn); ?>
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <h3><?php echo $edit_task ? 'Sửa Công Việc' : 'Thêm Công Việc'; ?></h3>
+                            <?php render_task_form($edit_task); ?>
+                        </div>
+                        <div class="col-md-9">
+                            <h3>Bảng Công Việc</h3>
+                            <?php render_kanban_board($tasks, $conn); ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
