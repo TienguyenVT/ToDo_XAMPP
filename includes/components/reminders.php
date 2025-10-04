@@ -5,6 +5,8 @@
  */
 function create_reminder($conn, $task_id, $reminder_time)
 {
+    $stmt = null;
+    $transactionStarted = false;
     try {
         error_log("Starting create_reminder - Task ID: $task_id, Time: $reminder_time");
         
@@ -14,7 +16,10 @@ function create_reminder($conn, $task_id, $reminder_time)
         }
         
         // Bắt đầu transaction
-        $conn->begin_transaction();
+        if (!$conn->begin_transaction()) {
+            throw new Exception("Không thể bắt đầu transaction");
+        }
+        $transactionStarted = true;
         error_log("Transaction started");
 
         // 1. Lấy thông tin task
@@ -35,7 +40,8 @@ function create_reminder($conn, $task_id, $reminder_time)
         
         $result = $stmt->get_result();
         $task = $result->fetch_assoc();
-        $stmt->close();
+    $stmt->close();
+    $stmt = null;
         
         if (!$task) {
             throw new Exception("Không tìm thấy task");
@@ -51,7 +57,8 @@ function create_reminder($conn, $task_id, $reminder_time)
         }
         
         $reminder_id = $stmt->insert_id;
-        $stmt->close();
+    $stmt->close();
+    $stmt = null;
 
         // 3. Tạo message cho notification
         $formatted_time = date('H:i d/m/Y', strtotime($reminder_time));
@@ -77,20 +84,39 @@ function create_reminder($conn, $task_id, $reminder_time)
             throw new Exception("Không thể thêm vào notification queue");
         }
         
-        $stmt->close();
+    $stmt->close();
+    $stmt = null;
 
         // Commit transaction nếu mọi thứ OK
         $conn->commit();
         return true;
 
     } catch (Exception $e) {
-        // Rollback nếu có lỗi
-        if ($conn->inTransaction()) {
-            $conn->rollback();
-            error_log("Transaction rolled back");
-        }
         error_log("Error in create_reminder: " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
+        
+        // Rollback nếu có lỗi
+        try {
+            if ($transactionStarted) {
+                $conn->rollback();
+                error_log("Transaction rolled back successfully");
+            }
+        } catch (Exception $rollbackError) {
+            error_log("Error during rollback: " . $rollbackError->getMessage());
+        }
+        
         throw $e;
+    } finally {
+        // Đảm bảo đóng statement nếu còn mở
+        try {
+            if ($stmt && $stmt instanceof mysqli_stmt) {
+                // Only close if not already closed earlier
+                $stmt->close();
+                error_log("Statement closed successfully");
+            }
+        } catch (Exception $closeError) {
+            error_log("Error closing statement: " . $closeError->getMessage());
+        }
     }
 }
 /**

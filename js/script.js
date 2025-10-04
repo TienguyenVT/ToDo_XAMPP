@@ -185,24 +185,4 @@ document.addEventListener("DOMContentLoaded", function () {
   setInterval(fetchReminders, 60000);
   // Kiểm tra ngay khi load trang
   fetchReminders();
-
-  // Prevent double submission for reminder forms
-  const reminderForms = document.querySelectorAll('.reminder-form');
-  reminderForms.forEach(form => {
-    form.addEventListener('submit', function(e) {
-      const submitBtn = form.querySelector('button[type="submit"]');
-      if (submitBtn.disabled) {
-        e.preventDefault();
-        return false;
-      }
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Đang xử lý...';
-      
-      // Re-enable button after 3 seconds as fallback
-      setTimeout(() => {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Thêm nhắc nhở';
-      }, 3000);
-    });
-  });
 });

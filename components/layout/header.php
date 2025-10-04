@@ -12,11 +12,21 @@ function render_header($user_full_name)
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
         <?php
         // Cache-busting using file modification time so browser reloads when files change
-        $baseCssPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR;
+        $basePath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR;
+        $baseCssPath = $basePath . 'css' . DIRECTORY_SEPARATOR;
+        $baseJsPath = $basePath . 'js' . DIRECTORY_SEPARATOR;
+        
+        // CSS files
         $uiFile = $baseCssPath . 'ui.css';
         $uiV = file_exists($uiFile) ? filemtime($uiFile) : time();
         ?>
     <link rel="stylesheet" href="css/ui.css?v=<?php echo $uiV; ?>">
+    <?php
+    // JavaScript files
+    $reminderJsFile = $baseJsPath . 'reminder_handler.js';
+    $reminderJsV = file_exists($reminderJsFile) ? filemtime($reminderJsFile) : time();
+    ?>
+    <script src="js/reminder_handler.js?v=<?php echo $reminderJsV; ?>" defer></script>
     <?php
     $notifCssFile = $baseCssPath . 'notifications.css';
     $notifCssV = file_exists($notifCssFile) ? filemtime($notifCssFile) : time();
