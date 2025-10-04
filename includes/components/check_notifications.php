@@ -37,7 +37,6 @@ try {
         FROM notification_queue nq
         JOIN tasks t ON nq.task_id = t.id
         WHERE nq.user_id = ? 
-        AND nq.status = 'pending'
         AND nq.scheduled_at <= NOW()
     ";
     
@@ -75,21 +74,7 @@ try {
         $notifications[] = $row;
     }
     
-    // Cập nhật trạng thái các notification đã gửi
-    if (!empty($notifications)) {
-        // Tạo câu query update với IN clause an toàn
-        $notify_ids = array_column($notifications, 'id');
-        $id_string = implode(',', array_map('intval', $notify_ids)); // Đảm bảo các ID là số
-        
-        $update_query = "UPDATE notification_queue SET status = 'sent' WHERE id IN ($id_string)";
-        error_log("Update query: " . $update_query);
-        
-        if (!$conn->query($update_query)) {
-            throw new Exception("Update status failed: " . $conn->error);
-        }
-    }
-
-    // Chuẩn bị response
+    // Chuẩn bị response (đọc-only, không cập nhật trạng thái ở đây)
     $response = [
         'success' => true,
         'notifications' => array_map(function($notif) {
@@ -113,7 +98,7 @@ try {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Internal server error: ' . $e->getMessage()
+        'message' => 'Internal server error'
     ]);
 } finally {
     if (isset($stmt)) {
@@ -123,12 +108,12 @@ try {
 
 // Helper function to map priority to notification type
 function mapPriorityToType($priority) {
-    switch(strtolower($priority)) {
+    switch(strtolower((string)$priority)) {
         case 'high':
-            return 'error';
+            return 'danger';
         case 'medium':
             return 'warning';
         default:
-            return 'success';
+            return 'info';
     }
 }

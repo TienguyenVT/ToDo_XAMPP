@@ -143,59 +143,65 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_task'])) {
     exit();
 }
 
-// Xử lý nhắc nhở
+// Xử lý nhắc nhở (hỗ trợ cả AJAX và non-AJAX để tránh lỗi 'Invalid request type')
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_reminder'])) {
+    $task_id = intval($_POST['task_id']);
+    $reminder_time = $_POST['reminder_time'] ?? '';
+    error_log("Processing reminder - Task: $task_id, Time: $reminder_time, User: $user_id");
+
     try {
-        if (!$isAjaxRequest) {
-            send_json_error("Invalid request type", 400);
-        }
-        $task_id = intval($_POST['task_id']);
-        $reminder_time = $_POST['reminder_time'];
-        error_log("Processing reminder - Task: $task_id, Time: $reminder_time, User: $user_id");
         if (empty($task_id) || empty($reminder_time)) {
-            send_json_error("Vui lòng điền đầy đủ thông tin");
+            throw new Exception("Vui lòng điền đầy đủ thông tin");
         }
+
         // Kiểm tra quyền truy cập task
         $sql = "SELECT id FROM tasks WHERE id = ? AND user_id = ?";
         $stmt = $conn->prepare($sql);
         if (!$stmt) {
-            send_json_error("Database error", 500);
+            throw new Exception("Database error");
         }
         $stmt->bind_param("ii", $task_id, $user_id);
         $stmt->execute();
         $result = $stmt->get_result();
         if (!$result->fetch_assoc()) {
             $stmt->close();
-            send_json_error("Không có quyền thực hiện thao tác này", 403);
+            throw new Exception("Không có quyền thực hiện thao tác này", 403);
         }
         $stmt->close();
+
         // Validate reminder time
         $reminder_datetime = new DateTime($reminder_time);
         $current_datetime = new DateTime();
         if ($reminder_datetime < $current_datetime) {
-            send_json_error("Thời gian nhắc nhở phải lớn hơn thời gian hiện tại");
+            throw new Exception("Thời gian nhắc nhở phải lớn hơn thời gian hiện tại");
         }
+
         // Tạo reminder với transaction
-        $result = false;
-        try {
-            $result = create_reminder($conn, $task_id, $reminder_time);
-        } catch (Exception $e) {
-            error_log("Exception in create_reminder: " . $e->getMessage());
-            error_log("Stack trace: " . $e->getTraceAsString());
-            send_json_error("Lỗi khi tạo nhắc nhở: " . $e->getMessage(), 500);
-        }
+        $result = create_reminder($conn, $task_id, $reminder_time);
         if (!$result) {
-            send_json_error("Không thể tạo nhắc nhở", 500);
+            throw new Exception("Không thể tạo nhắc nhở");
         }
-        send_json_success([], 'Thêm nhắc nhở thành công!');
+
+        // Nếu request là AJAX, trả về JSON; nếu không, dùng flash + redirect
+        if ($isAjaxRequest) {
+            send_json_success([], 'Thêm nhắc nhở thành công!');
+        } else {
+            set_flash('Thêm nhắc nhở thành công!', 'success');
+            header("location: index.php");
+            exit();
+        }
+
     } catch (Exception $e) {
         error_log("Reminder error: " . $e->getMessage());
-        error_log("Stack trace: " . $e->getTraceAsString());
-        send_json_error($e->getMessage(), 400);
-    } catch (Throwable $t) {
-        error_log("Unexpected error: " . $t->getMessage());
-        error_log("Stack trace: " . $t->getTraceAsString());
-        send_json_error("Có lỗi xảy ra, vui lòng thử lại sau", 500);
+        if ($isAjaxRequest) {
+            $code = ($e->getCode() >= 400 && $e->getCode() < 600) ? $e->getCode() : 400;
+            send_json_error($e->getMessage(), $code);
+        } else {
+            // Non-AJAX: set flash and redirect back
+            set_flash($e->getMessage(), 'danger');
+            header('location: index.php');
+            exit();
+        }
     }
 }
 

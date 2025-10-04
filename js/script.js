@@ -45,24 +45,64 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   // --- Reminder Notification ---
-  function showReminderAlert(taskTitle, reminderTime) {
-    const timeStr = new Date(reminderTime).toLocaleString('vi-VN', { hour12: false });
-    const html = `<div class="alert alert-info alert-dismissible fade" role="alert">
-      <strong>Nhắc nhở:</strong> Công việc <b>"${taskTitle}"</b> đến hạn lúc <b>${timeStr}</b>!
+  // Global displayed notifications set to avoid duplicates across polling/WebSocket
+  window._displayedNotifications = window._displayedNotifications || new Set();
+
+  // Unified generic alert renderer
+  function showAlert(type, message, opts = {}) {
+    const allowed = ['success', 'danger', 'warning', 'info'];
+    const t = allowed.includes(type) ? type : 'info';
+    const html = `<div class="alert alert-${t} alert-dismissible fade" role="alert">${message}
       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>`;
     const container = document.getElementById('global-message-container');
-    if (container) {
-      container.insertAdjacentHTML('beforeend', html);
-      const last = container.lastElementChild;
-      // trigger transition
-      requestAnimationFrame(() => {
-        last.classList.add('show');
-        updatePushedContent();
-      });
-      scheduleAlertAutoDismiss(last);
-    }
+    if (!container) return;
+
+    // dedupe by provided key or message
+    const key = opts.key || ('msg_' + message);
+    if (window._displayedNotifications.has(key)) return;
+    window._displayedNotifications.add(key);
+
+    container.insertAdjacentHTML('beforeend', html);
+    const last = container.lastElementChild;
+    // trigger transition
+    requestAnimationFrame(() => {
+      last.classList.add('show');
+      updatePushedContent();
+    });
+    scheduleAlertAutoDismiss(last, opts.autoDismissMs);
   }
+
+  // Reminder-specific renderer. Accepts either a reminder_time (ISO) or a message text.
+  function showReminderAlert(taskTitle, reminderPayload, opts = {}) {
+    let messageText = '';
+    // If reminderPayload looks like a datetime, format it; otherwise treat as message
+    if (reminderPayload && !isNaN(Date.parse(reminderPayload))) {
+      const timeStr = new Date(reminderPayload).toLocaleString('vi-VN', { hour12: false });
+      messageText = `<strong>Nhắc nhở:</strong> Công việc <b>"${escapeHtml(taskTitle)}"</b> đến hạn lúc <b>${escapeHtml(timeStr)}</b>!`;
+    } else if (typeof reminderPayload === 'string' && reminderPayload.trim() !== '') {
+      messageText = `<strong>Nhắc nhở:</strong> Công việc <b>"${escapeHtml(taskTitle)}"</b>: ${escapeHtml(reminderPayload)}`;
+    } else {
+      messageText = `<strong>Nhắc nhở:</strong> Công việc <b>"${escapeHtml(taskTitle)}"</b> có nhắc nhở.`;
+    }
+
+    // Use notification id if provided for dedupe
+    const key = opts.key || (`reminder_${opts.id || taskTitle}_${reminderPayload}`);
+    showAlert('info', messageText, { key: key, autoDismissMs: opts.autoDismissMs || ALERT_AUTO_DISMISS_MS });
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // Export renderers to global so other scripts can call them (overrides header placeholders)
+  window.showAlert = showAlert;
+  window.showReminderAlert = showReminderAlert;
 
   function fetchReminders() {
     fetch('includes/components/notifications.php')
@@ -71,24 +111,28 @@ document.addEventListener("DOMContentLoaded", function () {
         if (data.success && Array.isArray(data.notifications)) {
           data.notifications.forEach(n => {
             const key = `reminder_${n.task_id}_${n.reminder_time}`;
-            if (!window[key]) {
-              showReminderAlert(n.task_title, n.reminder_time);
-              window[key] = true;
+            if (!window._displayedNotifications.has(key)) {
+              showReminderAlert(n.task_title, n.reminder_time, { id: n.task_id, key: key });
+              // previously we ACKed displayed notifications; ACK endpoint removed, rely on read-only polling
             }
           });
         }
+      }).catch(err => {
+        console.error('fetchReminders error', err);
       });
   }
 
-  // Auto-dismiss alerts after N milliseconds
-  const ALERT_AUTO_DISMISS_MS = 5000; // 2 seconds
+  // ACK mechanism removed — notifications are read-only and delivered by polling
 
-  function scheduleAlertAutoDismiss(alertEl) {
+  // Auto-dismiss alerts after N milliseconds
+  const ALERT_AUTO_DISMISS_MS = 5000; // default auto-dismiss (ms)
+
+  function scheduleAlertAutoDismiss(alertEl, ms) {
     if (!alertEl) return;
     // If it's already scheduled, skip
     if (alertEl.dataset.autodismiss) return;
     alertEl.dataset.autodismiss = '1';
-    setTimeout(() => {
+  setTimeout(() => {
       try {
         // Use Bootstrap's alert dispose if available
         if (typeof bootstrap !== 'undefined' && bootstrap.Alert) {
@@ -108,7 +152,7 @@ document.addEventListener("DOMContentLoaded", function () {
         alertEl.remove();
         updatePushedContent();
       }
-    }, ALERT_AUTO_DISMISS_MS);
+    }, (typeof ms === 'number' && ms > 0) ? ms : ALERT_AUTO_DISMISS_MS);
   }
 
   // Move following content down by the total height of visible alerts

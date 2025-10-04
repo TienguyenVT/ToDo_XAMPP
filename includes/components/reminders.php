@@ -148,7 +148,7 @@ function delete_reminder($conn, $reminder_id)
         $conn->begin_transaction();
 
         // Xóa notifications trong queue trước
-        $sql = "DELETE FROM notification_queue WHERE reminder_id = ? AND status = 'pending'";
+    $sql = "DELETE FROM notification_queue WHERE reminder_id = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("i", $reminder_id);
         if (!$stmt->execute()) {

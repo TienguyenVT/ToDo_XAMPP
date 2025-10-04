@@ -32,6 +32,29 @@ function render_header($user_full_name)
     $notifJsFile = $baseJsPath . 'handle_notifications.js';
     $notifJsV = file_exists($notifJsFile) ? filemtime($notifJsFile) : time();
     ?>
+    <!-- Placeholder globals so header-included scripts can call them before script.js loads -->
+    <script>
+        window.showAlert = window.showAlert || function(type, message, opts) {
+            // simple fallback: log and create a basic alert if container exists
+            try {
+                var container = document && document.getElementById && document.getElementById('global-message-container');
+                if (container) {
+                    var div = document.createElement('div');
+                    div.className = 'alert alert-' + (type || 'info') + ' alert-dismissible fade show';
+                    div.innerHTML = (message || '') + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+                    container.appendChild(div);
+                    setTimeout(function(){ div.remove(); }, 5000);
+                } else {
+                    console.log('showAlert fallback:', type, message);
+                }
+            } catch (e) {
+                console.log('showAlert fallback error', e);
+            }
+        };
+        window.showReminderAlert = window.showReminderAlert || function(title, payload, opts) {
+            window.showAlert('info', '<strong>Nhắc nhở:</strong> ' + (title || '')); 
+        };
+    </script>
     <script src="js/handle_notifications.js?v=<?php echo $notifJsV; ?>"></script>
     </head>
 

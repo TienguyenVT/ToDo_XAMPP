@@ -92,8 +92,11 @@ function render_task_card($task, $conn)
         </div>
 
         <?php
-        require_once dirname(__FILE__) . '/reminder_component.php';
-        render_reminder_component($task['id'], $conn);
+        // Do not show reminder controls for completed tasks
+        if (!isset($task['status']) || $task['status'] !== 'completed') {
+            require_once dirname(__FILE__) . '/reminder_component.php';
+            render_reminder_component($task['id'], $conn);
+        }
         ?>
     </div>
 <?php
