@@ -1,4 +1,10 @@
 <?php
+// Tắt hiển thị lỗi trên output
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ini_set('error_log', 'error.log');
+
 session_start();
 
 // Nếu người dùng chưa đăng nhập, chuyển hướng về trang đăng nhập
@@ -9,6 +15,57 @@ if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
 
 require_once 'includes/db_connect.php';
 require_once 'includes/functions.php';
+require_once 'includes/response_helper.php';
+
+// Detect AJAX request (used to decide whether to output full HTML)
+$isAjaxRequest = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+                 strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+
+// Development debug flag - when true, AJAX errors will include exception traces in JSON
+define('DEV_DEBUG', true);
+
+// Convert PHP warnings/notices to ErrorException so they can be caught
+set_error_handler(function ($severity, $message, $file, $line) {
+    // Respect error_reporting level
+    if (!(error_reporting() & $severity)) {
+        return;
+    }
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+
+// Uncaught exception handler - log and, for AJAX, return JSON error with optional trace
+set_exception_handler(function ($e) use ($isAjaxRequest) {
+    error_log("Uncaught exception: " . $e->getMessage());
+    error_log($e->getTraceAsString());
+    if ($isAjaxRequest) {
+        if (defined('DEV_DEBUG') && DEV_DEBUG) {
+            send_json_error($e->getMessage() . "\n" . $e->getTraceAsString(), 500);
+        } else {
+            send_json_error('Internal server error', 500);
+        }
+    } else {
+        // For non-AJAX, just log and show a simple message
+        http_response_code(500);
+        echo '<h1>Internal Server Error</h1>';
+    }
+});
+
+// Shutdown handler to catch fatal errors
+register_shutdown_function(function () use ($isAjaxRequest) {
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        error_log('Shutdown fatal error: ' . print_r($err, true));
+        if ($isAjaxRequest) {
+            if (defined('DEV_DEBUG') && DEV_DEBUG) {
+                send_json_error('Fatal error: ' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line'], 500);
+            } else {
+                send_json_error('Internal server error', 500);
+            }
+        }
+    }
+});
+
+// Always include component files so their functions are available (including render_header)
 require_once 'components/layout/header.php';
 require_once 'components/layout/footer.php';
 require_once 'components/tasks/task_form.php';
@@ -19,6 +76,20 @@ $user_id = $_SESSION['user_id'];
 $tasks = [];
 $edit_task = null;
 
+// Log incoming request for debugging AJAX 500 errors
+try {
+    $reqInfo = [
+        'method' => $_SERVER['REQUEST_METHOD'] ?? '',
+        'isAjax' => $isAjaxRequest ? 'yes' : 'no',
+        'headers' => function_exists('getallheaders') ? getallheaders() : [],
+        'post' => $_POST,
+        'raw_input' => file_get_contents('php://input')
+    ];
+    error_log('Request debug: ' . json_encode($reqInfo));
+} catch (Throwable $t) {
+    error_log('Failed to log request debug: ' . $t->getMessage());
+}
+
 // Xử lý thêm công việc mới
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_task'])) {
     $title = trim($_POST['title']);
@@ -28,7 +99,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_task'])) {
 
     if (!empty($title)) {
         create_task($conn, $user_id, $title, $description, $due_date, $priority);
-        header("location: index.php?msg=" . urlencode("Thêm công việc thành công!"));
+        set_flash('Thêm công việc thành công!', 'success');
+        header("location: index.php");
         exit();
     }
 }
@@ -38,7 +110,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_status'])) {
     $task_id = $_POST['task_id'];
     $new_status = $_POST['status'];
     update_task_status($conn, $task_id, $new_status, $user_id);
-    header("location: index.php?msg=" . urlencode("Cập nhật trạng thái thành công!"));
+    set_flash('Cập nhật trạng thái thành công!', 'success');
+    header("location: index.php");
     exit();
 }
 
@@ -46,7 +119,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_status'])) {
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_task'])) {
     $task_id = $_POST['task_id'];
     delete_task($conn, $task_id, $user_id);
-    header("location: index.php?msg=" . urlencode("Xóa công việc thành công!"));
+    set_flash('Xóa công việc thành công!', 'success');
+    header("location: index.php");
     exit();
 }
 
@@ -64,23 +138,91 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_task'])) {
     $priority = isset($_POST['priority']) ? $_POST['priority'] : 'medium';
 
     update_task($conn, $task_id, $user_id, $title, $description, $due_date, $priority);
+    set_flash('Cập nhật công việc thành công!', 'success');
     header("location: index.php");
     exit();
 }
 
-// Xử lý nhắc nhở
+// Xử lý nhắc nhở (hỗ trợ cả AJAX và non-AJAX để tránh lỗi 'Invalid request type')
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_reminder'])) {
     $task_id = intval($_POST['task_id']);
-    $reminder_time = $_POST['reminder_time'];
-    add_reminder($conn, $task_id, $reminder_time);
-    header("location: index.php?msg=" . urlencode("Thêm nhắc nhở thành công!"));
-    exit();
+    $reminder_time = $_POST['reminder_time'] ?? '';
+    error_log("Processing reminder - Task: $task_id, Time: $reminder_time, User: $user_id");
+
+    try {
+        if (empty($task_id) || empty($reminder_time)) {
+            throw new Exception("Vui lòng điền đầy đủ thông tin");
+        }
+
+        // Kiểm tra quyền truy cập task
+        $sql = "SELECT id FROM tasks WHERE id = ? AND user_id = ?";
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            throw new Exception("Database error");
+        }
+        $stmt->bind_param("ii", $task_id, $user_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if (!$result->fetch_assoc()) {
+            $stmt->close();
+            throw new Exception("Không có quyền thực hiện thao tác này", 403);
+        }
+        $stmt->close();
+
+        // Validate reminder time
+        $reminder_datetime = new DateTime($reminder_time);
+        $current_datetime = new DateTime();
+        if ($reminder_datetime < $current_datetime) {
+            throw new Exception("Thời gian nhắc nhở phải lớn hơn thời gian hiện tại");
+        }
+
+        // Tạo reminder với transaction
+        $result = create_reminder($conn, $task_id, $reminder_time);
+        if (!$result) {
+            throw new Exception("Không thể tạo nhắc nhở");
+        }
+
+        // Nếu request là AJAX, trả về JSON; nếu không, dùng flash + redirect
+        if ($isAjaxRequest) {
+            send_json_success([], 'Thêm nhắc nhở thành công!');
+        } else {
+            set_flash('Thêm nhắc nhở thành công!', 'success');
+            header("location: index.php");
+            exit();
+        }
+
+    } catch (Exception $e) {
+        error_log("Reminder error: " . $e->getMessage());
+        if ($isAjaxRequest) {
+            $code = ($e->getCode() >= 400 && $e->getCode() < 600) ? $e->getCode() : 400;
+            send_json_error($e->getMessage(), $code);
+        } else {
+            // Non-AJAX: set flash and redirect back
+            set_flash($e->getMessage(), 'danger');
+            header('location: index.php');
+            exit();
+        }
+    }
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_reminder'])) {
     $reminder_id = intval($_POST['reminder_id']);
-    delete_reminder($conn, $reminder_id);
-    header("location: index.php?msg=" . urlencode("Xóa nhắc nhở thành công!"));
+    try {
+        delete_reminder($conn, $reminder_id);
+        if ($isAjaxRequest) {
+            send_json_success([], 'Xóa nhắc nhở thành công!');
+        } else {
+            set_flash('Xóa nhắc nhở thành công!', 'success');
+            header("location: index.php");
+        }
+    } catch (Exception $e) {
+        if ($isAjaxRequest) {
+            send_json_error('Lỗi khi xóa nhắc nhở!', 500);
+        } else {
+            set_flash('Lỗi khi xóa nhắc nhở!', 'danger');
+            header("location: index.php");
+        }
+    }
     exit();
 }
 
@@ -116,30 +258,49 @@ if (isset($_GET['sort']) && $_GET['sort'] !== '') {
 $stats_status = get_task_count_by_status($conn, $user_id);
 $stats_priority = get_task_count_by_priority($conn, $user_id);
 
-// Render giao diện
-render_header($_SESSION["full_name"]);
+// Render giao diện (chỉ khi không phải AJAX request)
+if (!$isAjaxRequest) {
+    // Render header
+    render_header($_SESSION["full_name"]);
 
-// Hiển thị thông báo nếu có
-if (isset($_GET['msg']) && $_GET['msg'] != '') {
-    echo '<div class="container mt-3"><div class="alert alert-success">' . htmlspecialchars($_GET['msg']) . '</div></div>';
-}
-?>
+    // Hiển thị flash message nếu có (session-based)
+    // display_flash() sẽ echo một <div class="alert alert-...">..</div>
+    display_flash();
+    ?>
 
-<div class="container mt-5">
-    <!-- BÁO CÁO THỐNG KÊ -->
-    <?php render_statistics($stats_status, $stats_priority); ?>
 
-    <!-- KANBAN + FORM CRUD -->
-    <div class="row">
-        <div class="col-md-4">
-            <h3><?php echo $edit_task ? 'Sửa Công Việc' : 'Thêm Công Việc Mới'; ?></h3>
-            <?php render_task_form($edit_task); ?>
+    <div class="container mt-5">
+        <!-- BÁO CÁO THỐNG KÊ -->
+        <?php render_statistics($stats_status, $stats_priority); ?>
+
+        <!-- KANBAN + FORM CRUD -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body p-4">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <h3><?php echo $edit_task ? 'Sửa Công Việc' : 'Thêm Công Việc'; ?></h3>
+                                <?php render_task_form($edit_task); ?>
+                            </div>
+                            <div class="col-md-9">
+                                <h3>Bảng Công Việc</h3>
+                                <?php render_kanban_board($tasks, $conn); ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-md-8">
-            <h3>Bảng Kanban Công Việc</h3>
-            <?php render_kanban_board($tasks, $conn); ?>
+
+        <!-- CONTAINER NHẮC NHỞ ĐÃ ĐẶT (moved inside .container.mt-5) -->
+        <div class="card">
+            <div class="card-body p-4">
+                <h3 class="mb-3">Nhắc Nhở Đã Đặt</h3>
+                <div id="reminder-list"></div>
+            </div>
         </div>
     </div>
-</div>
 
-<?php render_footer(); ?>
+    <?php render_footer();
+}

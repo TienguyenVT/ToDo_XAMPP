@@ -12,15 +12,54 @@ function render_header($user_full_name)
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
         <?php
         // Cache-busting using file modification time so browser reloads when files change
-        $baseCssPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR;
+        $basePath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR;
+        $baseCssPath = $basePath . 'css' . DIRECTORY_SEPARATOR;
+        $baseJsPath = $basePath . 'js' . DIRECTORY_SEPARATOR;
+        
+        // CSS files
         $uiFile = $baseCssPath . 'ui.css';
         $uiV = file_exists($uiFile) ? filemtime($uiFile) : time();
         ?>
-        <link rel="stylesheet" href="css/ui.css?v=<?php echo $uiV; ?>">
+    <link rel="stylesheet" href="css/ui.css?v=<?php echo $uiV; ?>">
+    <?php
+    // JavaScript files
+    $reminderJsFile = $baseJsPath . 'reminder_handler.js';
+    $reminderJsV = file_exists($reminderJsFile) ? filemtime($reminderJsFile) : time();
+    ?>
+    <script src="js/reminder_handler.js?v=<?php echo $reminderJsV; ?>" defer></script>
+    <?php
+    $baseJsPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'js' . DIRECTORY_SEPARATOR;
+    $notifJsFile = $baseJsPath . 'handle_notifications.js';
+    $notifJsV = file_exists($notifJsFile) ? filemtime($notifJsFile) : time();
+    ?>
+    <!-- Placeholder globals so header-included scripts can call them before script.js loads -->
+    <script>
+        window.showAlert = window.showAlert || function(type, message, opts) {
+            // simple fallback: log and create a basic alert if container exists
+            try {
+                var container = document && document.getElementById && document.getElementById('global-message-container');
+                if (container) {
+                    var div = document.createElement('div');
+                    div.className = 'alert alert-' + (type || 'info') + ' alert-dismissible fade show';
+                    div.innerHTML = (message || '') + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+                    container.appendChild(div);
+                    setTimeout(function(){ div.remove(); }, 5000);
+                } else {
+                    console.log('showAlert fallback:', type, message);
+                }
+            } catch (e) {
+                console.log('showAlert fallback error', e);
+            }
+        };
+        window.showReminderAlert = window.showReminderAlert || function(title, payload, opts) {
+            window.showAlert('info', '<strong>Nhắc nhở:</strong> ' + (title || '')); 
+        };
+    </script>
+    <script src="js/handle_notifications.js?v=<?php echo $notifJsV; ?>"></script>
     </head>
 
     <body>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white">
             <div class="container d-flex align-items-center justify-content-between">
                 <!-- Brand -->
                 <div class="d-flex align-items-center">
@@ -59,6 +98,8 @@ function render_header($user_full_name)
                 </div>
             </div>
         </nav>
+    <!-- Global message container (alerts injected here appear under header, above statistics) -->
+    <div id="global-message-container" class="container mt-3"></div>
     <?php
 }
     ?>

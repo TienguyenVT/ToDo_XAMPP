@@ -66,7 +66,7 @@ function render_task_card($task, $conn)
                 <div class="d-flex justify-content-center align-items-center gap-2">
                     <form action="index.php" method="POST" class="text-center">
                         <input type="hidden" name="task_id" value="<?php echo $task['id']; ?>">
-                        <select name="status" class="form-select form-select-sm" style="width:270px" onchange="this.form.submit()">
+                        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
                             <?php foreach ($columns as $key => $label): ?>
                                 <option value="<?php echo $key; ?>" <?php if ($task['status'] == $key) echo 'selected'; ?>>
                                     <?php echo $label; ?>
@@ -92,8 +92,11 @@ function render_task_card($task, $conn)
         </div>
 
         <?php
-        require_once dirname(__FILE__) . '/reminder_component.php';
-        render_reminder_component($task['id'], $conn);
+        // Do not show reminder controls for completed tasks
+        if (!isset($task['status']) || $task['status'] !== 'completed') {
+            require_once dirname(__FILE__) . '/reminder_component.php';
+            render_reminder_component($task['id'], $conn);
+        }
         ?>
     </div>
 <?php

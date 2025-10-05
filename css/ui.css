@@ -1,3 +1,36 @@
+#global-message-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1050;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+}
+
+#global-message-container .alert {
+  pointer-events: auto;
+  margin-bottom: 0.5rem;
+  opacity: 0;
+  transform: translateY(-100%);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  max-width: 600px;
+  width: 100%;
+}
+
+#global-message-container .alert.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.main-content {
+  transition: transform 0.3s ease;
+  will-change: transform;
+}
+
 .card-item .d-flex.align-items-center {
   display: flex;
   gap: 8px;
@@ -6,7 +39,7 @@
 }
 .card-item .d-flex.align-items-center .form-select {
   min-width: 140px;
-  max-width: 180px;
+  max-width: 240px; /* fit within updated 300px column */
   padding: 6px 8px;
   font-size: 13px;
 }
@@ -223,6 +256,38 @@ body .btn:focus-visible {
   border-color: var(--btn-border);
 }
 
+#global-message-container {
+  position: fixed;
+  top: 40px;
+  left: 0;
+  right: 0;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+}
+
+#global-message-container .alert {
+  max-width: 600px;
+  width: 100%;
+  margin-bottom: 0.5rem;
+  opacity: 0;
+  transform: translateY(-100%);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#global-message-container .alert.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.container.mt-5 {
+  transition: transform 0.3s ease;
+  transform-origin: top;
+  will-change: transform;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -245,6 +310,7 @@ body {
   display: flex;
   gap: 18px;
   align-items: flex-start;
+  width: 100%;
 }
 .column {
   flex: 1;
@@ -261,13 +327,12 @@ body {
   flex-direction: column;
 }
 
-/* Fix width for the "Chưa hoàn thành" (pending) column so it doesn't auto-scale.
-   Use flex shorthand to set a stable flex-basis and prevent growth/shrink where appropriate. */
+/* Equally distribute width among columns */
 .column[data-status="pending"],
 .column[data-status="in-progress"],
 .column[data-status="completed"] {
-  flex: 0 0 273px; /* fixed width on desktop */
-  max-width: 273px;
+  flex: 1 1 calc(33.333% - 12px);
+  min-width: 0;
 }
 .column h4 {
   margin: 0 0 8px 0;
@@ -354,27 +419,18 @@ body {
 
 @media (max-width: 1000px) {
   .board {
+    flex-wrap: nowrap;
     overflow-x: auto;
-    display: flex;
     padding-bottom: 8px;
   }
-  .column {
-    min-width: 320px;
-    flex: 0 0 320px;
+  .column[data-status="pending"],
+  .column[data-status="in-progress"],
+  .column[data-status="completed"] {
+    flex: 0 0 300px;
+    min-width: 300px;
   }
   .column-body {
     max-height: 520px;
-  }
-
-  /* On medium screens, reduce pending column width slightly */
-  .column[data-status="pending"] {
-    flex: 0 0 320px;
-    max-width: 320px;
-  }
-  .column[data-status="in-progress"],
-  .column[data-status="completed"] {
-    flex: 0 0 320px;
-    max-width: 320px;
   }
 }
 
@@ -420,6 +476,11 @@ body {
 .navbar {
   margin-bottom: 2rem;
 }
+.navbar.bg-white {
+  background-color: #fff !important;
+  color: #222;
+}
+
 .list-group-item h5 {
   color: #0d6efd;
 }
@@ -431,3 +492,22 @@ body {
     margin-bottom: 1rem;
   }
 }
+
+/* Slide-down transition for global alerts so they push content smoothly */
+#global-message-container .alert {
+  transform: translateY(-10px);
+  opacity: 0;
+  transition: transform 800ms ease, opacity 800ms ease;
+}
+#global-message-container .alert.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Smoothly move the main content container (.container.mt-5) down when global alerts appear */
+#global-message-container ~ .container.mt-2 {
+  transition: transform 800ms ease;
+  will-change: transform;
+}
+
+/* notification-container rules removed — notifications unified to #global-message-container */

@@ -31,10 +31,16 @@ CREATE TABLE
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
 
 -- Create reminders table
-CREATE TABLE
+CREATE TABLE 
     IF NOT EXISTS `reminders` (
-        `id` INT PRIMARY KEY AUTO_INCREMENT,
-        `task_id` INT NOT NULL,
-        `reminder_time` DATETIME NOT NULL,
-        FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE
-    ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+    `id` INT PRIMARY KEY AUTO_INCREMENT,
+    `task_id` INT NOT NULL,
+    `user_id` INT NOT NULL,
+    `reminder_time` DATETIME NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `notified_at` DATETIME DEFAULT NULL,
+    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+    INDEX `idx_reminder_time` (`reminder_time`),
+    INDEX `idx_user_task` (`user_id`, `task_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
