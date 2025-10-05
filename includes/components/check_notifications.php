@@ -10,6 +10,8 @@ if (session_status() === PHP_SESSION_NONE) {
 // Set header trước khi có bất kỳ output nào
 header('Content-Type: application/json');
 
+// Ensure shared helpers are loaded
+require_once dirname(__DIR__) . '/functions.php';
 require_once dirname(__DIR__) . '/db_connect.php';
 
 // Log để debug
@@ -31,30 +33,18 @@ try {
     // Log để debug
     error_log("User ID for notifications: " . $user_id);
     
-    // Lấy các notifications đến hạn
+    // Lấy các reminders đến hạn trực tiếp từ bảng reminders
     $query = "
-        SELECT nq.*, t.title as task_title, t.priority
-        FROM notification_queue nq
-        JOIN tasks t ON nq.task_id = t.id
-        WHERE nq.user_id = ? 
-        AND nq.scheduled_at <= NOW()
+        SELECT r.id as reminder_id, r.task_id, r.reminder_time, t.title as task_title, t.priority
+        FROM reminders r
+        JOIN tasks t ON r.task_id = t.id
+        WHERE r.user_id = ?
+        AND r.reminder_time <= NOW()
+        AND r.notified_at IS NULL
     ";
-    
+
     // Log debug info
     error_log("DEBUG - Current time: " . date('Y-m-d H:i:s'));
-    error_log("DEBUG - Query: " . str_replace('?', $user_id, $query));
-    
-    // Kiểm tra notifications trực tiếp
-    $debug_query = "SELECT COUNT(*) as total FROM notification_queue WHERE user_id = $user_id";
-    $debug_result = $conn->query($debug_query);
-    $debug_count = $debug_result->fetch_assoc();
-    error_log("DEBUG - Total notifications in queue: " . $debug_count['total']);
-
-    // Kiểm tra reminders
-    $debug_reminders = "SELECT COUNT(*) as total FROM reminders WHERE user_id = $user_id";
-    $debug_rem_result = $conn->query($debug_reminders);
-    $debug_rem_count = $debug_rem_result->fetch_assoc();
-    error_log("DEBUG - Total reminders: " . $debug_rem_count['total']);
     
     $stmt = $conn->prepare($query);
     if (!$stmt) {
@@ -69,27 +59,30 @@ try {
     
     $result = $stmt->get_result();
     $notifications = array();
-    
-    while ($row = $result->fetch_assoc()) {
-        $notifications[] = $row;
-    }
-    
-    // Chuẩn bị response (đọc-only, không cập nhật trạng thái ở đây)
-    $response = [
-        'success' => true,
-        'notifications' => array_map(function($notif) {
-            return [
-                'id' => $notif['id'],
-                'task_id' => $notif['task_id'],
-                'reminder_id' => $notif['reminder_id'],
-                'reminder_time' => $notif['scheduled_at'],
-                'message' => $notif['message'],
-                'type' => mapPriorityToType($notif['priority']),
-                'title' => $notif['task_title']
-            ];
-        }, $notifications)
-    ];
+    $reminderIds = array();
 
+    while ($row = $result->fetch_assoc()) {
+        $message = function_exists('format_notification_message') ? format_notification_message($row['task_title'], $row['reminder_time']) : '';
+        $notifications[] = [
+            'id' => (int)$row['reminder_id'],
+            'task_id' => (int)$row['task_id'],
+            'reminder_id' => (int)$row['reminder_id'],
+            'reminder_time' => $row['reminder_time'],
+            'message' => $message,
+            'type' => mapPriorityToType($row['priority']),
+            'title' => $row['task_title']
+        ];
+        $reminderIds[] = (int)$row['reminder_id'];
+    }
+
+    // Đánh dấu đã thông báo (chỉ khi có notifications)
+    if (!empty($reminderIds)) {
+        $ids = implode(',', array_map('intval', $reminderIds));
+        $updateSql = "UPDATE reminders SET notified_at = NOW() WHERE id IN ($ids) AND notified_at IS NULL";
+        $conn->query($updateSql);
+    }
+
+    $response = [ 'success' => true, 'notifications' => $notifications ];
     error_log("Sending response: " . json_encode($response));
     echo json_encode($response);
 

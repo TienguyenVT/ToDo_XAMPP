@@ -1,7 +1,8 @@
 <?php
 
 /**
- * Tạo nhắc nhở cho công việc và thêm vào notification queue
+ * Tạo nhắc nhở cho công việc (lưu trực tiếp vào bảng `reminders`)
+ * Lưu ý: hệ thống đã loại bỏ bảng `notification_queue`; client sẽ đọc trực tiếp từ `reminders`.
  */
 function create_reminder($conn, $task_id, $reminder_time)
 {
@@ -60,32 +61,9 @@ function create_reminder($conn, $task_id, $reminder_time)
     $stmt->close();
     $stmt = null;
 
-        // 3. Tạo message cho notification
-        $formatted_time = date('H:i d/m/Y', strtotime($reminder_time));
-        $message = sprintf(
-            'Nhắc nhở: Công việc "%s" đến hạn lúc %s',
-            $task['task_title'],
-            $formatted_time
-        );
-
-        // 4. Thêm vào notification queue
-        $sql = "INSERT INTO notification_queue 
-                (user_id, task_id, reminder_id, message, scheduled_at) 
-                VALUES (?, ?, ?, ?, ?)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("iiiss", 
-            $task['user_id'], 
-            $task_id, 
-            $reminder_id, 
-            $message, 
-            $reminder_time);
-            
-        if (!$stmt->execute()) {
-            throw new Exception("Không thể thêm vào notification queue");
-        }
-        
-    $stmt->close();
-    $stmt = null;
+        // 3. (No notification_queue) Optionally format message for immediate use
+        // Message is not stored in a separate queue table; clients will derive message when polling
+        $message = function_exists('format_notification_message') ? format_notification_message($task['task_title'], $reminder_time) : null;
 
         // Commit transaction nếu mọi thứ OK
         $conn->commit();
@@ -147,14 +125,7 @@ function delete_reminder($conn, $reminder_id)
     try {
         $conn->begin_transaction();
 
-        // Xóa notifications trong queue trước
-    $sql = "DELETE FROM notification_queue WHERE reminder_id = ?";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("i", $reminder_id);
-        if (!$stmt->execute()) {
-            throw new Exception("Không thể xóa notification");
-        }
-        $stmt->close();
+        // Không còn notification_queue; chỉ xóa reminder từ bảng reminders
 
         // Xóa reminder
         $sql = "DELETE FROM reminders WHERE id = ?";

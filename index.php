@@ -207,9 +207,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_reminder'])) {
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['delete_reminder'])) {
     $reminder_id = intval($_POST['reminder_id']);
-    delete_reminder($conn, $reminder_id);
-    set_flash('Xóa nhắc nhở thành công!', 'success');
-    header("location: index.php");
+    try {
+        delete_reminder($conn, $reminder_id);
+        if ($isAjaxRequest) {
+            send_json_success([], 'Xóa nhắc nhở thành công!');
+        } else {
+            set_flash('Xóa nhắc nhở thành công!', 'success');
+            header("location: index.php");
+        }
+    } catch (Exception $e) {
+        if ($isAjaxRequest) {
+            send_json_error('Lỗi khi xóa nhắc nhở!', 500);
+        } else {
+            set_flash('Lỗi khi xóa nhắc nhở!', 'danger');
+            header("location: index.php");
+        }
+    }
     exit();
 }
 
@@ -255,6 +268,7 @@ if (!$isAjaxRequest) {
     display_flash();
     ?>
 
+
     <div class="container mt-5">
         <!-- BÁO CÁO THỐNG KÊ -->
         <?php render_statistics($stats_status, $stats_priority); ?>
@@ -276,6 +290,14 @@ if (!$isAjaxRequest) {
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- CONTAINER NHẮC NHỞ ĐÃ ĐẶT (moved inside .container.mt-5) -->
+        <div class="card">
+            <div class="card-body p-4">
+                <h3 class="mb-3">Nhắc Nhở Đã Đặt</h3>
+                <div id="reminder-list"></div>
             </div>
         </div>
     </div>

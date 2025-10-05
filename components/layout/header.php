@@ -59,7 +59,7 @@ function render_header($user_full_name)
     </head>
 
     <body>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white">
             <div class="container d-flex align-items-center justify-content-between">
                 <!-- Brand -->
                 <div class="d-flex align-items-center">

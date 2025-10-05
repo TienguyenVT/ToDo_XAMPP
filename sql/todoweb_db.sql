@@ -38,24 +38,9 @@ CREATE TABLE
     `user_id` INT NOT NULL,
     `reminder_time` DATETIME NOT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `notified_at` DATETIME DEFAULT NULL,
     FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
     INDEX `idx_reminder_time` (`reminder_time`),
     INDEX `idx_user_task` (`user_id`, `task_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Bảng quản lý notification queue
--- Bảng quản lý notification queue
-CREATE TABLE IF NOT EXISTS `notification_queue` (
-    `id` INT PRIMARY KEY AUTO_INCREMENT,
-    `user_id` INT NOT NULL,
-    `task_id` INT NOT NULL,
-    `reminder_id` INT NOT NULL,
-    `message` TEXT NOT NULL,
-    `scheduled_at` DATETIME NOT NULL,
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`task_id`) REFERENCES `tasks` (`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`reminder_id`) REFERENCES `reminders` (`id`) ON DELETE CASCADE,
-    INDEX `idx_scheduled` (`scheduled_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

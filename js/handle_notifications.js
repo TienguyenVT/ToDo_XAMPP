@@ -18,22 +18,22 @@ function checkNotifications() {
             console.log('Received notifications:', data);
             if (data.success && data.notifications && data.notifications.length > 0) {
                 data.notifications.forEach(notification => {
-                    // Unified rendering: always use the global UI handlers which target
-                    // #global-message-container and are styled by ui.css. This removes
-                    // the old floating notification code path.
                     try {
                         if (typeof showReminderAlert === 'function' && notification.task_title) {
-                            showReminderAlert(notification.task_title, notification.scheduled_at || notification.reminder_time || '');
+                            showReminderAlert(notification.task_title, notification.reminder_time || '');
                         } else if (typeof showAlert === 'function') {
                             showAlert('info', notification.message);
                         } else {
-                            // If neither function exists, log an error so we can fix integration.
                             console.error('No global notification renderer available for', notification);
                         }
                     } catch (e) {
                         console.error('Error rendering notification via global UI:', e, notification);
                     }
                 });
+                // Tự động cập nhật lại bảng nhắc nhở khi có thông báo mới
+                if (typeof fetchAndShowReminders === 'function') {
+                    fetchAndShowReminders();
+                }
             }
         })
         .catch(error => {

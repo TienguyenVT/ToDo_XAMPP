@@ -22,6 +22,25 @@ function handleReminderSubmit(e) {
 
     // Lấy dữ liệu form
     const formData = new FormData(form);
+    // Kiểm tra reminder_time không ở quá khứ
+    const reminderTimeInput = form.querySelector('[name="reminder_time"]');
+    if (reminderTimeInput) {
+        const value = reminderTimeInput.value;
+        if (value) {
+            const selected = new Date(value);
+            const now = new Date();
+            if (selected < now) {
+                if (typeof showAlert === 'function') {
+                    showAlert('danger', 'Không thể đặt nhắc nhở trong quá khứ!');
+                } else {
+                    alert('Không thể đặt nhắc nhở trong quá khứ!');
+                }
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+                return;
+            }
+        }
+    }
     // Ensure server sees this as an add_reminder action when submitting via AJAX
     if (!formData.has('add_reminder')) {
         formData.append('add_reminder', '1');
@@ -63,20 +82,15 @@ function handleReminderSubmit(e) {
     }))
     .then(data => {
         // Hiển thị thông báo thành công
-        // Use global showAlert if available
         if (typeof showAlert === 'function') {
             showAlert('success', data.message || 'Đã thêm nhắc nhở thành công!');
         } else {
             alert(data.message || 'Đã thêm nhắc nhở thành công!');
         }
-        
         // Reset form
         form.reset();
-        
-        // Reload trang sau 1 giây
-        setTimeout(() => {
-            window.location.reload();
-        }, 1000);
+        // Cập nhật lại danh sách nhắc nhở bên dưới form
+        fetchAndShowReminders();
     })
     .catch(error => {
         console.error('Error:', error);
@@ -100,4 +114,67 @@ function handleReminderSubmit(e) {
     });
 }
 
-// visual rendering handled by global showAlert from script.js
+// Hiển thị danh sách nhắc nhở đã đặt dưới form
+function fetchAndShowReminders() {
+    fetch('/ToDo/includes/components/list_reminders.php')
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) {
+                document.getElementById('reminder-list').innerHTML = '<div class="alert alert-danger">Không lấy được danh sách nhắc nhở!</div>';
+                return;
+            }
+            let html = '<table class="table table-bordered table-sm mb-0"><thead><tr><th>Công việc</th><th>Thời gian nhắc</th><th>Trạng thái thông báo</th><th></th></tr></thead><tbody>';
+            if (data.reminders.length === 0) {
+                html += '<tr><td colspan="4" class="text-center">Chưa có nhắc nhở nào</td></tr>';
+            } else {
+                data.reminders.forEach(r => {
+                    html += `<tr>
+                        <td>${r.task_title}</td>
+                        <td>${r.reminder_time}</td>
+                        <td>${r.notified_at ? 'Đã thông báo' : 'Chưa thông báo'}</td>
+                        <td><button class="btn btn-danger btn-sm btn-delete-reminder" data-reminder-id="${r.id}">Xóa</button></td>
+                    </tr>`;
+                });
+            }
+            html += '</tbody></table>';
+            document.getElementById('reminder-list').innerHTML = html;
+
+            // Gán sự kiện xóa cho các nút
+            document.querySelectorAll('.btn-delete-reminder').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const reminderId = this.getAttribute('data-reminder-id');
+                    if (!reminderId) return;
+                    if (!confirm('Bạn có chắc chắn muốn xóa nhắc nhở này?')) return;
+                    btn.disabled = true;
+                    fetch('index.php', {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `delete_reminder=1&reminder_id=${encodeURIComponent(reminderId)}`
+                    })
+                    .then(res => res.text())
+                    .then(text => {
+                        let data;
+                        try { data = JSON.parse(text); } catch { data = {}; }
+                        if (data.success) {
+                            if (typeof showAlert === 'function') showAlert('success', 'Đã xóa nhắc nhở!');
+                            fetchAndShowReminders();
+                        } else {
+                            if (typeof showAlert === 'function') showAlert('danger', data.message || 'Lỗi khi xóa nhắc nhở!');
+                        }
+                    })
+                    .catch(() => {
+                        if (typeof showAlert === 'function') showAlert('danger', 'Lỗi khi xóa nhắc nhở!');
+                    })
+                    .finally(() => { btn.disabled = false; });
+                });
+            });
+        })
+        .catch(() => {
+            document.getElementById('reminder-list').innerHTML = '<div class="alert alert-danger">Lỗi khi lấy danh sách nhắc nhở!</div>';
+        });
+}
+
+// Khi trang load, chỉ fetch và render vào div reminder-list đã có sẵn trong container mới
+document.addEventListener('DOMContentLoaded', function() {
+    fetchAndShowReminders();
+});
