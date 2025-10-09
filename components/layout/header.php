@@ -56,6 +56,13 @@ function render_header($user_full_name)
         };
     </script>
     <script src="js/handle_notifications.js?v=<?php echo $notifJsV; ?>"></script>
+    <?php
+    // Ensure main script is available on all pages (including responses that may omit footer)
+    $baseJsPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'js' . DIRECTORY_SEPARATOR;
+    $scriptFile = $baseJsPath . 'script.js';
+    $scriptV = file_exists($scriptFile) ? filemtime($scriptFile) : time();
+    ?>
+    <script src="js/script.js?v=<?php echo $scriptV; ?>" defer></script>
     </head>
 
     <body>

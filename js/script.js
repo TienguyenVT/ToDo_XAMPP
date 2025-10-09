@@ -1,7 +1,17 @@
 // File này có thể được sử dụng để thêm các tương tác JavaScript trong tương lai.
 // Ví dụ: sử dụng AJAX để thêm/xóa công việc mà không cần tải lại trang.
 
-document.addEventListener("DOMContentLoaded", function () {
+// Helper: run init now if DOM already ready, or on DOMContentLoaded otherwise
+function runWhenReady(fn) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', fn);
+  } else {
+    // DOM already parsed
+    fn();
+  }
+}
+
+runWhenReady(function () {
   console.log("TodoWeb script loaded and ready.");
   // Xác nhận xóa công việc
   const deleteButtons = document.querySelectorAll('button[name="delete_task"]');
@@ -12,7 +22,6 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   });
-  // Thông báo cập nhật trạng thái handled by server redirect -> index.php?msg=
 
   // Kanban scroller buttons and keyboard support
   const kanbanScroller = document.getElementById("kanban-scroller");

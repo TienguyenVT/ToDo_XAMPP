@@ -116,18 +116,25 @@ function handleReminderSubmit(e) {
 
 // Hiển thị danh sách nhắc nhở đã đặt dưới form
 function fetchAndShowReminders() {
+    // Find the container first; if not present, do nothing (this script can be included on pages without the container)
+    const container = document.getElementById('reminder-list');
+    if (!container) return;
+
     fetch('/ToDo/includes/components/list_reminders.php')
         .then(res => res.json())
         .then(data => {
-            if (!data.success) {
-                document.getElementById('reminder-list').innerHTML = '<div class="alert alert-danger">Không lấy được danh sách nhắc nhở!</div>';
+            if (!data || !data.success) {
+                container.innerHTML = '<div class="alert alert-danger">Không lấy được danh sách nhắc nhở!</div>';
                 return;
             }
+
+            const reminders = Array.isArray(data.reminders) ? data.reminders : [];
+
             let html = '<table class="table table-bordered table-sm mb-0"><thead><tr><th>Công việc</th><th>Thời gian nhắc</th><th>Trạng thái thông báo</th><th></th></tr></thead><tbody>';
-            if (data.reminders.length === 0) {
+            if (reminders.length === 0) {
                 html += '<tr><td colspan="4" class="text-center">Chưa có nhắc nhở nào</td></tr>';
             } else {
-                data.reminders.forEach(r => {
+                reminders.forEach(r => {
                     html += `<tr>
                         <td>${r.task_title}</td>
                         <td>${r.reminder_time}</td>
@@ -137,10 +144,10 @@ function fetchAndShowReminders() {
                 });
             }
             html += '</tbody></table>';
-            document.getElementById('reminder-list').innerHTML = html;
+            container.innerHTML = html;
 
             // Gán sự kiện xóa cho các nút
-            document.querySelectorAll('.btn-delete-reminder').forEach(btn => {
+            container.querySelectorAll('.btn-delete-reminder').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const reminderId = this.getAttribute('data-reminder-id');
                     if (!reminderId) return;
@@ -170,7 +177,8 @@ function fetchAndShowReminders() {
             });
         })
         .catch(() => {
-            document.getElementById('reminder-list').innerHTML = '<div class="alert alert-danger">Lỗi khi lấy danh sách nhắc nhở!</div>';
+            // Only update if container still exists on the page
+            if (container) container.innerHTML = '<div class="alert alert-danger">Lỗi khi lấy danh sách nhắc nhở!</div>';
         });
 }
 
