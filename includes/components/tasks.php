@@ -54,8 +54,17 @@ function get_user_tasks($conn, $user_id, $priority = null)
  */
 function create_task($conn, $user_id, $title, $description, $due_date, $priority)
 {
-    $sql = "INSERT INTO tasks (user_id, title, description, due_date, priority) VALUES (?, ?, ?, ?, ?)";
+    // title is required by the database schema
+    if (empty($title)) {
+        error_log("create_task: title is required");
+        return false;
+    }
+
+    // Use NULLIF to convert empty strings to NULL for due_date
+    // Use COALESCE to fall back to 'medium' if priority is empty
+    $sql = "INSERT INTO tasks (user_id, title, description, due_date, priority) VALUES (?, ?, ?, NULLIF(?, ''), COALESCE(NULLIF(?, ''), 'medium'))";
     if ($stmt = $conn->prepare($sql)) {
+        // bind as strings; NULLIF will turn empty string into SQL NULL
         $stmt->bind_param("issss", $user_id, $title, $description, $due_date, $priority);
         if ($stmt->execute()) {
             return true;
@@ -141,7 +150,15 @@ function get_task_detail($conn, $task_id, $user_id)
  */
 function update_task($conn, $task_id, $user_id, $title, $description, $due_date, $priority)
 {
-    $sql = "UPDATE tasks SET title = ?, description = ?, due_date = ?, priority = ? WHERE id = ? AND user_id = ?";
+    // Update only the provided values; when a value is an empty string we keep the existing value
+    // NULLIF(?, '') converts empty strings to NULL, and COALESCE(..., column) keeps the column value
+    $sql = "UPDATE tasks SET
+                title = COALESCE(NULLIF(?, ''), title),
+                description = COALESCE(NULLIF(?, ''), description),
+                due_date = COALESCE(NULLIF(?, ''), due_date),
+                priority = COALESCE(NULLIF(?, ''), priority)
+            WHERE id = ? AND user_id = ?";
+
     if ($stmt = $conn->prepare($sql)) {
         $stmt->bind_param("ssssii", $title, $description, $due_date, $priority, $task_id, $user_id);
         if ($stmt->execute()) {
